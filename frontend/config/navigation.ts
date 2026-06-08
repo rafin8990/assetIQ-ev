@@ -2,13 +2,15 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
+  Truck,
   Users,
   type LucideIcon,
 } from "lucide-react"
 
 export type NavSubItem = {
   title: string
-  href: string
+  href?: string
+  children?: NavSubItem[]
 }
 
 export type NavLinkItem = {
@@ -50,6 +52,36 @@ export const sidebarNavSections: NavSection[] = [
           { title: "Purchase Order", href: "/purchase-orders" },
           { title: "Stock", href: "/stock" },
           { title: "Vendor", href: "/vendor" },
+          {
+            title: "Report",
+            children: [
+              {
+                title: "Today's Purchase Order Report",
+                href: "/procurement/reports/todays-purchase-order",
+              },
+              {
+                title: "Date Wise Report",
+                href: "/procurement/reports/date-wise",
+              },
+              {
+                title: "List of Due/Pay Report",
+                href: "/procurement/reports/due-pay",
+              },
+              {
+                title: "Monthwise Report",
+                href: "/procurement/reports/monthwise",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Outbound",
+        icon: Truck,
+        children: [
+          { title: "Out Request", href: "/outbound/out-request" },
+          { title: "Request Approval", href: "/outbound/request-approval" },
+          { title: "Request Outbound", href: "/outbound/request-outbound" },
         ],
       },
       {
@@ -65,10 +97,20 @@ export const sidebarNavSections: NavSection[] = [
   },
 ]
 
+function flattenNavSubItems(items: NavSubItem[]): { title: string; href: string }[] {
+  return items.flatMap((item) =>
+    item.href
+      ? [{ title: item.title, href: item.href }]
+      : item.children?.length
+        ? flattenNavSubItems(item.children)
+        : []
+  )
+}
+
 export const sidebarNavItems = sidebarNavSections.flatMap((section) =>
   section.items.flatMap((item) =>
     item.children?.length
-      ? item.children.map((child) => ({ title: child.title, href: child.href }))
+      ? flattenNavSubItems(item.children)
       : item.href
         ? [{ title: item.title, href: item.href }]
         : []

@@ -17,6 +17,7 @@ import {
   PurchaseOrderStatus,
   PurchaseOrderType,
 } from './purchase-orders.interface';
+import { PurchaseOrdersReportsService } from './purchase-orders-reports.service';
 import { PurchaseOrdersService } from './purchase-orders.service';
 
 const mapUploadedAttachment = (file?: Express.Multer.File | null) =>
@@ -212,9 +213,71 @@ const receivePurchaseOrder = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getDailyReport = catchAsync(async (req: Request, res: Response) => {
+  const date = String(req.query.date);
+  const result = await PurchaseOrdersReportsService.getDailyReport(date);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Daily purchase order report retrieved successfully',
+    data: result,
+  });
+});
+
+const getDateRangeReport = catchAsync(async (req: Request, res: Response) => {
+  const fromDate = String(req.query.fromDate);
+  const toDate = String(req.query.toDate);
+  const result = await PurchaseOrdersReportsService.getDateRangeReport(
+    fromDate,
+    toDate
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Date range purchase order report retrieved successfully',
+    data: result,
+  });
+});
+
+const getDuePaidReport = catchAsync(async (req: Request, res: Response) => {
+  const fromDate = String(req.query.fromDate);
+  const toDate = String(req.query.toDate);
+  const paymentType = String(req.query.paymentType) as 'due' | 'paid';
+  const result = await PurchaseOrdersReportsService.getDuePaidReport(
+    fromDate,
+    toDate,
+    paymentType
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Due/paid purchase order report retrieved successfully',
+    data: result,
+  });
+});
+
+const getMonthwiseReport = catchAsync(async (req: Request, res: Response) => {
+  const year = Number(req.query.year);
+  const result = await PurchaseOrdersReportsService.getMonthwiseReport(year);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Monthwise purchase order report retrieved successfully',
+    data: result,
+  });
+});
+
 export const PurchaseOrdersController = {
   createPurchaseOrder,
   getAllPurchaseOrders,
+  getDailyReport,
+  getDateRangeReport,
+  getDuePaidReport,
+  getMonthwiseReport,
   getSinglePurchaseOrder,
   updatePurchaseOrder,
   deletePurchaseOrder,

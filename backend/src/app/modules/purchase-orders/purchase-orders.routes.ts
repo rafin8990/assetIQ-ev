@@ -20,6 +20,30 @@ router.get(
 );
 
 router.get(
+  '/reports/daily',
+  validateRequest(PurchaseOrdersValidation.getDailyReportZodSchema),
+  PurchaseOrdersController.getDailyReport
+);
+
+router.get(
+  '/reports/date-range',
+  validateRequest(PurchaseOrdersValidation.getDateRangeReportZodSchema),
+  PurchaseOrdersController.getDateRangeReport
+);
+
+router.get(
+  '/reports/due-paid',
+  validateRequest(PurchaseOrdersValidation.getDuePaidReportZodSchema),
+  PurchaseOrdersController.getDuePaidReport
+);
+
+router.get(
+  '/reports/monthwise',
+  validateRequest(PurchaseOrdersValidation.getMonthwiseReportZodSchema),
+  PurchaseOrdersController.getMonthwiseReport
+);
+
+router.get(
   '/:id',
   validateRequest(PurchaseOrdersValidation.getSinglePurchaseOrderZodSchema),
   PurchaseOrdersController.getSinglePurchaseOrder

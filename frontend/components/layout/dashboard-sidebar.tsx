@@ -68,6 +68,14 @@ function NavLink({
   )
 }
 
+function isNavSubItemActive(item: NavSubItem, pathname: string): boolean {
+  if (item.href) {
+    return pathname.startsWith(item.href)
+  }
+
+  return item.children?.some((child) => isNavSubItemActive(child, pathname)) ?? false
+}
+
 function NavSubLink({
   item,
   isActive,
@@ -77,6 +85,8 @@ function NavSubLink({
   isActive: boolean
   onNavigate?: () => void
 }) {
+  if (!item.href) return null
+
   return (
     <Link
       href={item.href}
@@ -93,6 +103,102 @@ function NavSubLink({
   )
 }
 
+function NavSubGroup({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: NavSubItem
+  pathname: string
+  onNavigate?: () => void
+}) {
+  const children = item.children ?? []
+  const hasActiveChild = isNavSubItemActive(item, pathname)
+  const [open, setOpen] = React.useState(hasActiveChild)
+
+  React.useEffect(() => {
+    if (hasActiveChild) {
+      setOpen(true)
+    }
+  }, [hasActiveChild])
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn(
+          "flex w-full items-center gap-2 py-2 pl-3 text-left text-sm transition-colors",
+          hasActiveChild
+            ? "font-semibold text-[#373B44]"
+            : "font-normal text-[#5c6370] hover:text-[#373B44]"
+        )}
+      >
+        <span className="flex-1 truncate">{item.title}</span>
+        <ChevronDown
+          className={cn(
+            "size-3.5 shrink-0 text-[#8b95a5] transition-transform duration-200",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+
+      {open && (
+        <div className="ml-3 border-l border-[#e8eaed] py-1 pl-3">
+          {children.map((child) =>
+            child.children?.length ? (
+              <NavSubGroup
+                key={child.title}
+                item={child}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            ) : (
+              <NavSubLink
+                key={child.href ?? child.title}
+                item={child}
+                isActive={child.href ? pathname.startsWith(child.href) : false}
+                onNavigate={onNavigate}
+              />
+            )
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function renderCollapsedSubItems(
+  items: NavSubItem[],
+  onNavigate?: () => void
+): React.ReactNode {
+  return items.map((child) => {
+    if (child.children?.length) {
+      return (
+        <React.Fragment key={child.title}>
+          <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium text-[#8b95a5]">
+            {child.title}
+          </DropdownMenuLabel>
+          <DropdownMenuGroup>
+            {renderCollapsedSubItems(child.children, onNavigate)}
+          </DropdownMenuGroup>
+        </React.Fragment>
+      )
+    }
+
+    if (!child.href) return null
+
+    return (
+      <DropdownMenuItem
+        key={child.href}
+        render={<Link href={child.href} onClick={onNavigate} />}
+      >
+        {child.title}
+      </DropdownMenuItem>
+    )
+  })
+}
+
 function NavGroup({
   item,
   collapsed,
@@ -106,7 +212,9 @@ function NavGroup({
 }) {
   const Icon = item.icon
   const children = item.children ?? []
-  const hasActiveChild = children.some((child) => pathname.startsWith(child.href))
+  const hasActiveChild = children.some((child) =>
+    isNavSubItemActive(child, pathname)
+  )
   const [open, setOpen] = React.useState(hasActiveChild)
 
   React.useEffect(() => {
@@ -145,11 +253,7 @@ function NavGroup({
             {item.title}
           </DropdownMenuLabel>
           <DropdownMenuGroup>
-            {children.map((child) => (
-              <DropdownMenuItem key={child.href} render={<Link href={child.href} onClick={onNavigate} />}>
-                {child.title}
-              </DropdownMenuItem>
-            ))}
+            {renderCollapsedSubItems(children, onNavigate)}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -187,14 +291,23 @@ function NavGroup({
 
       {open && (
         <div className="ml-8 border-l border-[#e8eaed] py-1 pl-4">
-          {children.map((child) => (
-            <NavSubLink
-              key={child.href}
-              item={child}
-              isActive={pathname.startsWith(child.href)}
-              onNavigate={onNavigate}
-            />
-          ))}
+          {children.map((child) =>
+            child.children?.length ? (
+              <NavSubGroup
+                key={child.title}
+                item={child}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            ) : (
+              <NavSubLink
+                key={child.href ?? child.title}
+                item={child}
+                isActive={child.href ? pathname.startsWith(child.href) : false}
+                onNavigate={onNavigate}
+              />
+            )
+          )}
         </div>
       )}
     </div>

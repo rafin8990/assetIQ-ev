@@ -140,8 +140,45 @@ const deletePurchaseOrderZodSchema = z.object({
   }),
 });
 
+const dateQuerySchema = z
+  .string({ error: 'Date is required' })
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Date must be YYYY-MM-DD' });
+
+const getDailyReportZodSchema = z.object({
+  query: z.object({
+    date: dateQuerySchema,
+  }),
+});
+
+const getDateRangeReportZodSchema = z.object({
+  query: z.object({
+    fromDate: dateQuerySchema,
+    toDate: dateQuerySchema,
+  }),
+});
+
+const getDuePaidReportZodSchema = z.object({
+  query: z.object({
+    fromDate: dateQuerySchema,
+    toDate: dateQuerySchema,
+    paymentType: z.enum(['due', 'paid']),
+  }),
+});
+
+const getMonthwiseReportZodSchema = z.object({
+  query: z.object({
+    year: z
+      .string({ error: 'Year is required' })
+      .regex(/^\d{4}$/, { error: 'Year must be YYYY' }),
+  }),
+});
+
 export const PurchaseOrdersValidation = {
   getAllPurchaseOrdersZodSchema,
   getSinglePurchaseOrderZodSchema,
   deletePurchaseOrderZodSchema,
+  getDailyReportZodSchema,
+  getDateRangeReportZodSchema,
+  getDuePaidReportZodSchema,
+  getMonthwiseReportZodSchema,
 };
