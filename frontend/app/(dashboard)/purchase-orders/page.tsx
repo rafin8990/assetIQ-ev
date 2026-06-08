@@ -1,16 +1,9 @@
 import type { Metadata } from "next"
-import { ShoppingCart } from "lucide-react"
 
-import { PagePlaceholder } from "@/components/dashboard/page-placeholder"
+import { PurchaseOrdersPageClient } from "@/components/purchase-orders/purchase-orders-page-client"
 
 export const metadata: Metadata = { title: "Purchase Orders" }
 
 export default function PurchaseOrdersPage() {
-  return (
-    <PagePlaceholder
-      title="Purchase Orders"
-      description="Track and manage purchase orders."
-      icon={ShoppingCart}
-    />
-  )
+  return <PurchaseOrdersPageClient />
 }

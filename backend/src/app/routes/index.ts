@@ -4,9 +4,13 @@ import AuthRoutes from '../modules/auth/auth.routes';
 import BrandsRoutes from '../modules/brands/brands.routes';
 import CategoriesRoutes from '../modules/categories/categories.routes';
 import ItemsRoutes from '../modules/items/items.routes';
+import PurchaseOrdersRoutes from '../modules/purchase-orders/purchase-orders.routes';
+import RequisitionsRoutes from '../modules/requisitions/requisitions.routes';
+import StocksRoutes from '../modules/stocks/stocks.routes';
 import SubCategoriesRoutes from '../modules/sub-categories/sub-categories.routes';
 import UnitsRoutes from '../modules/units/units.routes';
 import UsersRoutes from '../modules/users/users.routes';
+import VendorsRoutes from '../modules/vendors/vendors.routes';
 
 const router = express.Router();
 
@@ -43,6 +47,22 @@ const moduleRoutes: ModuleRoute[] = [
   {
     path: '/units',
     routes: UnitsRoutes,
+  },
+  {
+    path: '/requisitions',
+    routes: RequisitionsRoutes,
+  },
+  {
+    path: '/vendors',
+    routes: VendorsRoutes,
+  },
+  {
+    path: '/purchase-orders',
+    routes: PurchaseOrdersRoutes,
+  },
+  {
+    path: '/stocks',
+    routes: StocksRoutes,
   },
 ];
 

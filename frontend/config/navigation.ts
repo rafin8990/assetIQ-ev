@@ -49,6 +49,7 @@ export const sidebarNavSections: NavSection[] = [
           { title: "Requisition", href: "/requisitions" },
           { title: "Purchase Order", href: "/purchase-orders" },
           { title: "Stock", href: "/stock" },
+          { title: "Vendor", href: "/vendor" },
         ],
       },
       {

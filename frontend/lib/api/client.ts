@@ -61,9 +61,14 @@ export async function apiFormRequest<T>(
   formData: FormData,
   method: "POST" | "PATCH" = "POST"
 ): Promise<ApiResponse<T>> {
+  const token = getAccessToken()
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     method,
     body: formData,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   })
 
   const body = (await response.json()) as ApiResponse<T> | ApiErrorBody
@@ -84,7 +89,13 @@ export async function downloadFile(
   endpoint: string,
   filename: string
 ): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`)
+  const token = getAccessToken()
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
 
   if (!response.ok) {
     throw new ApiError(response.status, "Failed to download file")
