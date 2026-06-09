@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react"
 
 import { statAccentStyles } from "@/lib/brand"
@@ -17,17 +18,13 @@ export function StatCard({
   trend,
   icon: Icon,
   accent,
+  href,
 }: DashboardStat) {
   const styles = statAccentStyles[accent]
   const TrendIcon = trendIcons[trend]
 
-  return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-xl border p-5 shadow-sm transition-shadow hover:shadow-md",
-        styles.card
-      )}
-    >
+  const content = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div
           className={cn(
@@ -58,6 +55,22 @@ export function StatCard({
           {value}
         </p>
       </div>
-    </div>
+    </>
   )
+
+  const className = cn(
+    "overflow-hidden rounded-xl border p-5 shadow-sm transition-shadow hover:shadow-md",
+    styles.card,
+    href && "block cursor-pointer"
+  )
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    )
+  }
+
+  return <div className={className}>{content}</div>
 }

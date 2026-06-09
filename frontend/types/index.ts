@@ -11,6 +11,23 @@ export type DashboardStat = {
   trend: StatTrend
   icon: LucideIcon
   accent: StatAccent
+  href?: string
+}
+
+export type DashboardStatSection = {
+  title: string
+  description?: string
+  stats: DashboardStat[]
+}
+
+export type PendingApprovalItem = {
+  id: number
+  reference: string
+  type: "requisition" | "purchase_order" | "out_request" | "return"
+  typeLabel: string
+  requestedBy?: string | null
+  createdAt: string
+  href: string
 }
 
 export type ChartDataPoint = {

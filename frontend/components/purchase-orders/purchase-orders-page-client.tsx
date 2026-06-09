@@ -559,7 +559,7 @@ export function PurchaseOrdersPageClient() {
                           </Button>
                         )}
 
-                        {canApprovePurchaseOrder(authUser?.role, po.status) && (
+                        {canApprovePurchaseOrder(authUser, po.status) && (
                           <Button
                             size="sm"
                             className="bg-[#4DC591] hover:bg-[#3db37f]"
@@ -574,7 +574,7 @@ export function PurchaseOrdersPageClient() {
                           </Button>
                         )}
 
-                        {canReceivePurchaseOrder(authUser?.role, po.status) && (
+                        {canReceivePurchaseOrder(authUser, po.status) && (
                           <Button
                             variant="outline"
                             size="sm"

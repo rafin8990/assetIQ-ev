@@ -69,7 +69,7 @@ function formatQuantity(value: number) {
 
 export function StocksPageClient() {
   const authUser = getAuthUser()
-  const isSuperAdmin = canManageStock(authUser?.role)
+  const canManage = canManageStock(authUser)
 
   const [stocks, setStocks] = React.useState<Stock[]>([])
   const [items, setItems] = React.useState<Item[]>([])
@@ -95,7 +95,7 @@ export function StocksPageClient() {
     React.useState<BulkStockImportResult | null>(null)
 
   const fetchLookups = React.useCallback(async () => {
-    if (!isSuperAdmin) return
+    if (!canManage) return
 
     try {
       const [itemsRes, unitsRes] = await Promise.all([
@@ -108,7 +108,7 @@ export function StocksPageClient() {
       setItems([])
       setUnits([])
     }
-  }, [isSuperAdmin])
+  }, [canManage])
 
   const fetchStocks = React.useCallback(async () => {
     setIsLoading(true)
@@ -242,11 +242,11 @@ export function StocksPageClient() {
           </h2>
           <p className="text-[#8b95a5]">
             Warehouse inventory updated when purchase orders are received.
-            {isSuperAdmin && " Super admins can add stock manually or upload."}
+            {canManage && " You can add stock manually or upload."}
           </p>
         </div>
 
-        {isSuperAdmin && (
+        {canManage && (
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={openImportModal}>
               <FileSpreadsheet />
@@ -337,7 +337,7 @@ export function StocksPageClient() {
                 <th className="px-5 py-3 font-semibold text-[#373B44]">
                   Last Updated
                 </th>
-                {isSuperAdmin && (
+                {canManage && (
                   <th className="px-5 py-3 text-right font-semibold text-[#373B44]">
                     Actions
                   </th>
@@ -348,7 +348,7 @@ export function StocksPageClient() {
               {isLoading ? (
                 <tr>
                   <td
-                    colSpan={isSuperAdmin ? 5 : 4}
+                    colSpan={canManage ? 5 : 4}
                     className="px-5 py-10 text-center text-[#8b95a5]"
                   >
                     <span className="inline-flex items-center gap-2">
@@ -360,11 +360,11 @@ export function StocksPageClient() {
               ) : stocks.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={isSuperAdmin ? 5 : 4}
+                    colSpan={canManage ? 5 : 4}
                     className="px-5 py-10 text-center text-[#8b95a5]"
                   >
                     No stock records yet. Receive a purchase order
-                    {isSuperAdmin ? " or add stock manually" : ""} to get
+                    {canManage ? " or add stock manually" : ""} to get
                     started.
                   </td>
                 </tr>
@@ -392,7 +392,7 @@ export function StocksPageClient() {
                     <td className="px-5 py-3.5 text-[#8b95a5]">
                       {formatDate(stock.updated_at)}
                     </td>
-                    {isSuperAdmin && (
+                    {canManage && (
                       <td className="px-5 py-3.5">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -452,7 +452,7 @@ export function StocksPageClient() {
         </div>
       </div>
 
-      {isSuperAdmin && (
+      {canManage && (
         <>
           <StockFormModal
             open={formOpen}

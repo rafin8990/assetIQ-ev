@@ -1,4 +1,7 @@
+import { PERMISSION_ACTION_APPROVE_REQUISITION } from "@/config/permissions"
+import { hasPermission } from "@/lib/auth/permissions"
 import type { RequisitionStatus } from "@/types/requisitions"
+import type { User } from "@/types/users"
 
 export const selectClassName =
   "flex h-9 w-full rounded-md border border-[#e8eaed] bg-white px-3 py-1 text-sm text-[#373B44] outline-none focus:border-[#4DC591] focus:ring-2 focus:ring-[#4DC591]/20"
@@ -46,10 +49,11 @@ export function canManageRequisition(status: RequisitionStatus) {
 }
 
 export function canApproveRequisition(
-  role: string | undefined,
+  user: Pick<User, "role" | "permissions"> | null | undefined,
   status: RequisitionStatus
 ) {
   return (
-    (role === "admin" || role === "super_admin") && status === "pending"
+    hasPermission(user, PERMISSION_ACTION_APPROVE_REQUISITION) &&
+    status === "pending"
   )
 }

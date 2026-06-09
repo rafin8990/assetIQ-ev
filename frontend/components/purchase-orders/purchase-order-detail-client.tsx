@@ -306,7 +306,7 @@ export function PurchaseOrderDetailClient({
             </Button>
           )}
 
-          {canApprovePurchaseOrder(authUser?.role, purchaseOrder.status) && (
+          {canApprovePurchaseOrder(authUser, purchaseOrder.status) && (
             <Button
               className="bg-[#4DC591] hover:bg-[#3db37f]"
               onClick={() => {
@@ -319,7 +319,7 @@ export function PurchaseOrderDetailClient({
             </Button>
           )}
 
-          {canReceivePurchaseOrder(authUser?.role, purchaseOrder.status) && (
+          {canReceivePurchaseOrder(authUser, purchaseOrder.status) && (
             <Button
               variant="outline"
               onClick={() => {

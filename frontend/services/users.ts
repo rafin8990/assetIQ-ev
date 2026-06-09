@@ -30,15 +30,6 @@ export async function getUsers(params: UsersListParams = {}) {
   }
 }
 
-export async function getAdminUsers(params: UsersListParams = {}) {
-  const response = await apiRequest<User[]>(`/users/admins${buildQuery(params)}`)
-
-  return {
-    data: response.data ?? [],
-    meta: response.meta as PaginationMeta,
-  }
-}
-
 export async function getUser(id: number) {
   const response = await apiRequest<User>(`/users/${id}`)
   return response.data as User

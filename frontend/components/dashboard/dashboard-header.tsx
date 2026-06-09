@@ -5,16 +5,20 @@ import { BdClock } from "@/components/dashboard/bd-clock"
 import { Button } from "@/components/ui/button"
 
 type DashboardHeaderProps = {
+  userName?: string | null
   apiStatus?: string | null
   onRefresh?: () => void
   isRefreshing?: boolean
 }
 
 export function DashboardHeader({
+  userName,
   apiStatus,
   onRefresh,
   isRefreshing = false,
 }: DashboardHeaderProps) {
+  const greetingName = userName?.trim() || "there"
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4DC591] via-[#2f7a5c] to-[#373B44] p-6 text-white shadow-lg md:p-8">
       <div className="absolute -top-12 -left-12 size-48 rounded-full bg-[#4DC591]/25" />
@@ -51,14 +55,14 @@ export function DashboardHeader({
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-sm">
               <Sparkles className="size-3.5 text-[#4DC591]" />
-              Asset Management Dashboard
+              AssetIQ Operations Dashboard
             </div>
             <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-              Welcome back, Super Admin
+              Welcome back, {greetingName}
             </h2>
-            <p className="mt-2 max-w-lg text-sm text-white/75 md:text-base">
-              Live overview of your asset catalog — items, categories, brands,
-              and recent inventory activity.
+            <p className="mt-2 max-w-xl text-sm text-white/75 md:text-base">
+              Full overview of assets, procurement, outbound operations, stock
+              levels, pending approvals, and recent activity across the system.
             </p>
             {apiStatus && (
               <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-[#d8ffef]">

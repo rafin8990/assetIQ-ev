@@ -4,7 +4,8 @@ import * as React from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
-import { getAccessToken, syncAuthCookie } from "@/lib/auth/token"
+import { getAccessToken, getAuthUser, syncAuthCookie } from "@/lib/auth/token"
+import { getProfile } from "@/services/auth"
 
 type AuthGuardProps = {
   children: React.ReactNode
@@ -25,6 +26,17 @@ export function AuthGuard({ children }: AuthGuardProps) {
     }
 
     syncAuthCookie()
+
+    const user = getAuthUser()
+    const needsPermissionsRefresh = !user?.permissions?.length && user?.role !== "super_admin"
+
+    if (needsPermissionsRefresh) {
+      getProfile()
+        .catch(() => undefined)
+        .finally(() => setIsReady(true))
+      return
+    }
+
     setIsReady(true)
   }, [pathname, router])
 

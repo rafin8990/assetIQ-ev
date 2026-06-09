@@ -272,7 +272,7 @@ export function RequisitionDetailClient({
             </Button>
           )}
 
-          {canApproveRequisition(authUser?.role, requisition.status) && (
+          {canApproveRequisition(authUser, requisition.status) && (
             <Button
               className="bg-[#4DC591] hover:bg-[#3db37f]"
               onClick={() => {

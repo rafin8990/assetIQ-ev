@@ -7,6 +7,7 @@ export type User = {
   email: string | null
   image: string | null
   role: UserRole
+  permissions?: string[]
   created_at: string
   updated_at: string
 }

@@ -552,7 +552,7 @@ export function RequisitionsPageClient() {
                         )}
 
                         {canApproveRequisition(
-                          authUser?.role,
+                          authUser,
                           requisition.status
                         ) && (
                           <Button

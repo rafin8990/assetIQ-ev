@@ -1,8 +1,14 @@
+import {
+  PERMISSION_ACTION_APPROVE_PURCHASE_ORDER,
+  PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER,
+} from "@/config/permissions"
+import { hasPermission } from "@/lib/auth/permissions"
 import type {
   PoItemPayload,
   PurchaseOrderStatus,
   PurchaseOrderType,
 } from "@/types/purchase-orders"
+import type { User } from "@/types/users"
 
 export const selectClassName =
   "flex h-9 w-full rounded-md border border-[#e8eaed] bg-white px-3 py-1 text-sm text-[#373B44] outline-none focus:border-[#4DC591] focus:ring-2 focus:ring-[#4DC591]/20"
@@ -73,20 +79,22 @@ export function canManagePurchaseOrder(status: PurchaseOrderStatus) {
 }
 
 export function canApprovePurchaseOrder(
-  role: string | undefined,
+  user: Pick<User, "role" | "permissions"> | null | undefined,
   status: PurchaseOrderStatus
 ) {
   return (
-    (role === "admin" || role === "super_admin") && status === "pending"
+    hasPermission(user, PERMISSION_ACTION_APPROVE_PURCHASE_ORDER) &&
+    status === "pending"
   )
 }
 
 export function canReceivePurchaseOrder(
-  role: string | undefined,
+  user: Pick<User, "role" | "permissions"> | null | undefined,
   status: PurchaseOrderStatus
 ) {
   return (
-    (role === "admin" || role === "super_admin") && status === "approved"
+    hasPermission(user, PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER) &&
+    status === "approved"
   )
 }
 

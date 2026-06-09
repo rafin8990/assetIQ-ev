@@ -44,7 +44,17 @@ export function MovementHistory({ items }: MovementHistoryProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#e8eaed]">
-            {items.map((item) => {
+            {items.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-5 py-10 text-center text-[#8b95a5]"
+                >
+                  No recent stock or outbound movements yet.
+                </td>
+              </tr>
+            ) : (
+              items.map((item) => {
               const isIn = item.movement === "in"
 
               return (
@@ -84,7 +94,8 @@ export function MovementHistory({ items }: MovementHistoryProps) {
                   <td className="px-5 py-3.5 text-[#8b95a5]">{item.time}</td>
                 </tr>
               )
-            })}
+              })
+            )}
           </tbody>
         </table>
       </div>

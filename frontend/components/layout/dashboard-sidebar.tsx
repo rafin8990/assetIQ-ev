@@ -12,6 +12,8 @@ import {
   type NavLinkItem,
   type NavSubItem,
 } from "@/config/navigation"
+import { filterNavByPermissions } from "@/lib/auth/permissions"
+import { getAuthUser } from "@/lib/auth/token"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -319,6 +321,7 @@ export function DashboardSidebar({
   onNavigate,
 }: DashboardSidebarProps) {
   const pathname = usePathname()
+  const navSections = filterNavByPermissions(sidebarNavSections, getAuthUser())
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href)
@@ -353,7 +356,7 @@ export function DashboardSidebar({
 
       <ScrollArea className="min-h-0 flex-1">
         <nav className="py-2">
-          {sidebarNavSections.map((section, sectionIndex) => (
+          {navSections.map((section, sectionIndex) => (
             <div key={section.label ?? sectionIndex}>
               {section.label && !collapsed && (
                 <p className="px-5 pt-4 pb-1 text-xs font-medium text-[#8b95a5]">

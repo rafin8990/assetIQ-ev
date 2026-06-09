@@ -81,7 +81,32 @@ export const sidebarNavSections: NavSection[] = [
         children: [
           { title: "Out Request", href: "/outbound/out-request" },
           { title: "Request Approval", href: "/outbound/request-approval" },
-          { title: "Request Outbound", href: "/outbound/request-outbound" },
+          { title: "Return", href: "/outbound/return" },
+          {
+            title: "Report",
+            children: [
+              {
+                title: "Today's Report",
+                href: "/outbound/reports/todays-report",
+              },
+              {
+                title: "Date Wise Report",
+                href: "/outbound/reports/date-wise",
+              },
+              {
+                title: "Monthly Report",
+                href: "/outbound/reports/monthly",
+              },
+              {
+                title: "User Wise Report",
+                href: "/outbound/reports/user-wise",
+              },
+              {
+                title: "Return Report",
+                href: "/outbound/reports/return-report",
+              },
+            ],
+          },
         ],
       },
       {
@@ -90,7 +115,7 @@ export const sidebarNavSections: NavSection[] = [
         children: [
           { title: "Add User", href: "/users/add" },
           { title: "List of User", href: "/users" },
-          { title: "Admin Management", href: "/users/admins" },
+          { title: "User Permissions", href: "/users/permissions" },
         ],
       },
     ],

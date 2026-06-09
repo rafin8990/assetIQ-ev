@@ -20,6 +20,7 @@ type AssetPerformanceChartProps = {
   title?: string
   description?: string
   valueLabel?: string
+  secondaryLabel?: string
   showSecondary?: boolean
 }
 
@@ -28,6 +29,7 @@ export function AssetPerformanceChart({
   title = "Asset Performance",
   description = "Monthly performance score vs target benchmark",
   valueLabel = "Performance",
+  secondaryLabel = "Target",
   showSecondary = true,
 }: AssetPerformanceChartProps) {
   const [mounted, setMounted] = React.useState(false)
@@ -91,7 +93,7 @@ export function AssetPerformanceChart({
                     verticalAlign="top"
                     height={36}
                     formatter={(value) =>
-                      value === "value" ? valueLabel : "Target"
+                      value === "value" ? valueLabel : secondaryLabel
                     }
                   />
                 )}
