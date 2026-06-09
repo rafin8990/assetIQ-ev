@@ -4,7 +4,6 @@ import app from './app';
 import config from './config';
 import { errorlogger, logger } from './shared/logger';
 import pool from './utils/dbClient';
-import redisClient from './utils/redisClient';
 
 // Global socket instance for emitting events
 export let io: SocketIOServer;
@@ -44,24 +43,6 @@ async function bootstrap() {
       }
     }
 
-    // Test Redis connection (non-blocking — server starts even if Redis is down)
-    logger.info('🔍 Testing Redis connection...');
-    try {
-      await Promise.race([
-        redisClient.connect(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Redis connection timeout')), 6000)
-        ),
-      ]);
-      if (redisClient.isReady()) {
-        logger.info('✅ Redis connected successfully');
-      } else {
-        logger.warn('⚠️  Redis not available - continuing without Redis');
-      }
-    } catch (redisError) {
-      logger.warn('⚠️  Redis not available - continuing without Redis');
-      logger.warn(`   ${(redisError as Error).message}`);
-    }
   } catch (error) {
     const err = error as Error;
     logger.error('❌ Connection failed:', err);
@@ -123,34 +104,43 @@ async function bootstrap() {
   logger.info('✅ Socket.IO initialized');
 
 
-  const exitHandler = async () => {
-    if (server) {
-      server.close(async () => {
+  const shutdown = async (signal: string, exitCode = 0) => {
+    logger.info(`${signal} received — shutting down`);
+
+    await new Promise<void>(resolve => {
+      if (!server) {
+        resolve();
+        return;
+      }
+
+      server.close(() => {
         logger.info('Server closed');
-        // Close Redis connection
-        await redisClient.disconnect();
-        logger.info('Redis disconnected');
+        resolve();
       });
+    });
+
+    try {
+      await pool.end();
+      logger.info('Database pool closed');
+    } catch {
+      // ignore pool shutdown errors
     }
-    process.exit(1);
+
+    process.exit(exitCode);
   };
 
   const unexpectedErrorHandler = (error: unknown) => {
     errorlogger.error(error);
-    exitHandler();
+    void shutdown('UNCAUGHT_ERROR', 1);
   };
 
   process.on('uncaughtException', unexpectedErrorHandler);
   process.on('unhandledRejection', unexpectedErrorHandler);
-
   process.on('SIGTERM', () => {
-    if (process.env.NODE_ENV !== 'production') {
-      return;
-    }
-    logger.info('SIGTERM received');
-    if (server) {
-      server.close();
-    }
+    void shutdown('SIGTERM');
+  });
+  process.on('SIGINT', () => {
+    void shutdown('SIGINT');
   });
 }
 

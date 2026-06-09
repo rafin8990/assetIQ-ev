@@ -1,5 +1,6 @@
 import express from 'express';
 
+import { optionalAuth } from '../../middlewares/auth';
 import { uploadRequisitionAttachment } from '../../middlewares/uploadRequisitionAttachment';
 import validateRequest from '../../middlewares/validateRequest';
 import { RequisitionsController } from './requisitions.controller';
@@ -27,6 +28,7 @@ router.get(
 
 router.patch(
   '/:id',
+  optionalAuth,
   uploadRequisitionAttachment.single('attachment'),
   RequisitionsController.updateRequisition
 );

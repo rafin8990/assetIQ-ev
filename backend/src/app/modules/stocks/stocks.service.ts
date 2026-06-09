@@ -16,6 +16,7 @@ import {
   IBulkStockImportResult,
   ICreateManualStockPayload,
   IStockFilters,
+  IStockDecreaseItem,
   IStockIncreaseItem,
   IStockWithRelations,
   IUpdateStockPayload,
@@ -63,6 +64,53 @@ const increaseStockForItem = async (
      VALUES ($1, $2, $3)`,
     [item.item_id, quantity, item.unit_id ?? null]
   );
+};
+
+const decreaseStockForItem = async (
+  client: DbClient,
+  item: IStockDecreaseItem
+) => {
+  const quantity = Number(item.quantity);
+
+  if (Number.isNaN(quantity) || quantity <= 0) {
+    return;
+  }
+
+  const updated = await client.query(
+    `UPDATE stocks
+     SET quantity = quantity - $2,
+         updated_at = NOW()
+     WHERE item_id = $1 AND quantity >= $2`,
+    [item.item_id, quantity]
+  );
+
+  if (!updated.rowCount) {
+    const stock = await getStockByItemId(item.item_id);
+    const available = stock ? Number(stock.quantity) : 0;
+
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Insufficient stock for item id ${item.item_id}. Available: ${available}, requested: ${quantity}`
+    );
+  }
+};
+
+const decreaseStockFromOutRequestItems = async (
+  client: DbClient,
+  items: IStockDecreaseItem[]
+) => {
+  for (const item of items) {
+    await decreaseStockForItem(client, item);
+  }
+};
+
+const increaseStockFromReturnItems = async (
+  client: DbClient,
+  items: IStockIncreaseItem[]
+) => {
+  for (const item of items) {
+    await increaseStockForItem(client, item);
+  }
 };
 
 const increaseStockFromPurchaseOrderItems = async (
@@ -352,6 +400,8 @@ const generateBulkImportTemplate = (): Buffer => {
 
 export const StocksService = {
   increaseStockFromPurchaseOrderItems,
+  increaseStockFromReturnItems,
+  decreaseStockFromOutRequestItems,
   addManualStock,
   updateStock,
   deleteStock,

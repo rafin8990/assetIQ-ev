@@ -1,7 +1,7 @@
 import express from 'express';
 
-import { ENUM_USER_ROLE } from '../../../enums/user';
-import { auth, requireRole } from '../../middlewares/auth';
+import { auth, requirePermission } from '../../middlewares/auth';
+import { PERMISSION_ACTION_MANAGE_STOCK } from '../permissions/permissions.constant';
 import { upload } from '../../middlewares/upload';
 import validateRequest from '../../middlewares/validateRequest';
 import { StocksController } from './stocks.controller';
@@ -9,27 +9,24 @@ import { StocksValidation } from './stocks.validation';
 
 const router = express.Router();
 
-const superAdminOnly = [ENUM_USER_ROLE.SUPER_ADMIN];
+const manageStock = [auth, requirePermission(PERMISSION_ACTION_MANAGE_STOCK)];
 
 router.post(
   '/manual',
-  auth,
-  requireRole(superAdminOnly),
+  ...manageStock,
   validateRequest(StocksValidation.createManualStockZodSchema),
   StocksController.addManualStock
 );
 
 router.get(
   '/bulk-import/template',
-  auth,
-  requireRole(superAdminOnly),
+  ...manageStock,
   StocksController.downloadBulkImportTemplate
 );
 
 router.post(
   '/bulk-import',
-  auth,
-  requireRole(superAdminOnly),
+  ...manageStock,
   upload.single('file'),
   StocksController.bulkImportStock
 );
@@ -42,16 +39,14 @@ router.get(
 
 router.patch(
   '/:id',
-  auth,
-  requireRole(superAdminOnly),
+  ...manageStock,
   validateRequest(StocksValidation.updateStockZodSchema),
   StocksController.updateStock
 );
 
 router.delete(
   '/:id',
-  auth,
-  requireRole(superAdminOnly),
+  ...manageStock,
   validateRequest(StocksValidation.deleteStockZodSchema),
   StocksController.deleteStock
 );

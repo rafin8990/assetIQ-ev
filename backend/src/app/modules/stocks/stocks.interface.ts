@@ -23,6 +23,11 @@ export type IStockIncreaseItem = {
   unit_id?: number | null;
 };
 
+export type IStockDecreaseItem = {
+  item_id: number;
+  quantity: number;
+};
+
 export type ICreateManualStockPayload = {
   item_id: number;
   quantity: number;

@@ -3,6 +3,7 @@ import { IUser } from '../users/users.interface';
 export type ITokenPayload = {
   userId: number;
   role: string;
+  permissions?: string[];
   iat?: number;
   exp?: number;
 };

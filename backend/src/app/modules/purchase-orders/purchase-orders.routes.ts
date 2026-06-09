@@ -1,5 +1,10 @@
 import express from 'express';
 
+import { auth, requirePermission } from '../../middlewares/auth';
+import {
+  PERMISSION_ACTION_APPROVE_PURCHASE_ORDER,
+  PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER,
+} from '../permissions/permissions.constant';
 import { uploadPurchaseOrderAttachment } from '../../middlewares/uploadPurchaseOrderAttachment';
 import validateRequest from '../../middlewares/validateRequest';
 import { PurchaseOrdersController } from './purchase-orders.controller';
@@ -57,6 +62,8 @@ router.patch(
 
 router.patch(
   '/:id/approve',
+  auth,
+  requirePermission(PERMISSION_ACTION_APPROVE_PURCHASE_ORDER),
   PurchaseOrdersController.approvePurchaseOrder
 );
 
@@ -67,6 +74,8 @@ router.patch(
 
 router.patch(
   '/:id/receive',
+  auth,
+  requirePermission(PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER),
   PurchaseOrdersController.receivePurchaseOrder
 );
 

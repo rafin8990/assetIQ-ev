@@ -3,11 +3,30 @@ import httpStatus from 'http-status';
 import { jwtHelpers } from '../../helpers/jwtHelpers';
 import config from '../../config';
 import { ITokenPayload } from '../modules/auth/auth.interface';
+import { PermissionsService } from '../modules/permissions/permissions.service';
+
+const loadUserPermissions = async (req: Request): Promise<string[]> => {
+  if (!req.user) {
+    return [];
+  }
+
+  if (req.user.permissions) {
+    return req.user.permissions;
+  }
+
+  const permissions = await PermissionsService.getUserPermissionKeys(
+    req.user.userId
+  );
+
+  req.user.permissions = permissions;
+
+  return permissions;
+};
 
 const auth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
-    
+
     if (!token) {
       return res.status(httpStatus.UNAUTHORIZED).json({
         success: false,
@@ -15,12 +34,10 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    // Verify token
     const decoded = jwtHelpers.verifyToken(token, config.jwt_secret as string);
-    
-    // Add user info to request
+
     req.user = decoded as ITokenPayload;
-    
+
     next();
   } catch (error) {
     return res.status(httpStatus.UNAUTHORIZED).json({
@@ -33,17 +50,16 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
 const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
-    
+
     if (token) {
       try {
         const decoded = jwtHelpers.verifyToken(token, config.jwt_secret as string);
         req.user = decoded as ITokenPayload;
       } catch (error) {
-        // Token is invalid, but we continue without user info
         req.user = undefined;
       }
     }
-    
+
     next();
   } catch (error) {
     next();
@@ -70,4 +86,57 @@ const requireRole = (roles: string[]) => {
   };
 };
 
-export { auth, optionalAuth, requireRole };
+const requirePermission = (permissionKey: string) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(httpStatus.UNAUTHORIZED).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    if (PermissionsService.isSuperAdmin(req.user.role)) {
+      return next();
+    }
+
+    const permissions = await loadUserPermissions(req);
+
+    if (!permissions.includes(permissionKey)) {
+      return res.status(httpStatus.FORBIDDEN).json({
+        success: false,
+        message: 'Insufficient permissions',
+      });
+    }
+
+    next();
+  };
+};
+
+const requireAnyPermission = (permissionKeys: string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(httpStatus.UNAUTHORIZED).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    if (PermissionsService.isSuperAdmin(req.user.role)) {
+      return next();
+    }
+
+    const permissions = await loadUserPermissions(req);
+    const hasAny = permissionKeys.some(key => permissions.includes(key));
+
+    if (!hasAny) {
+      return res.status(httpStatus.FORBIDDEN).json({
+        success: false,
+        message: 'Insufficient permissions',
+      });
+    }
+
+    next();
+  };
+};
+
+export { auth, optionalAuth, requireRole, requirePermission, requireAnyPermission };

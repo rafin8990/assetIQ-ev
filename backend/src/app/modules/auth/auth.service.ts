@@ -4,6 +4,7 @@ import httpStatus from 'http-status';
 import config from '../../../config';
 import ApiError from '../../../errors/ApiError';
 import { jwtHelpers } from '../../../helpers/jwtHelpers';
+import { PermissionsService } from '../permissions/permissions.service';
 import { IUser } from '../users/users.interface';
 import { UsersService } from '../users/users.service';
 import {
@@ -14,6 +15,19 @@ import {
   ITokenPayload,
   IUpdateProfilePayload,
 } from './auth.interface';
+
+const attachPermissions = async (user: IUser): Promise<IUser> => {
+  if (PermissionsService.isSuperAdmin(user.role)) {
+    return {
+      ...user,
+      permissions: PermissionsService.getPermissionsRegistry().allKeys,
+    };
+  }
+
+  const permissions = await PermissionsService.getUserPermissionKeys(user.id);
+
+  return { ...user, permissions };
+};
 
 const generateTokens = (user: IUser): IAuthTokens => {
   const payload: ITokenPayload = {
@@ -53,10 +67,11 @@ const login = async (payload: ILoginPayload): Promise<ILoginResponse> => {
   }
 
   const { password: _password, ...safeUser } = user;
-  const tokens = generateTokens(safeUser);
+  const userWithPermissions = await attachPermissions(safeUser);
+  const tokens = generateTokens(userWithPermissions);
 
   return {
-    user: safeUser,
+    user: userWithPermissions,
     ...tokens,
   };
 };
@@ -78,7 +93,8 @@ const refreshToken = async (token: string): Promise<IAuthTokens> => {
 };
 
 const getProfile = async (userId: number): Promise<IUser> => {
-  return UsersService.getSingleUser(userId);
+  const user = await UsersService.getSingleUser(userId);
+  return attachPermissions(user);
 };
 
 const updateProfile = async (

@@ -2,7 +2,10 @@ import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 import { ZodError } from 'zod';
 
+import ApiError from '../../../errors/ApiError';
 import { paginationFields } from '../../../constants/pagination';
+import { PERMISSION_ACTION_APPROVE_REQUISITION } from '../permissions/permissions.constant';
+import { PermissionsService } from '../permissions/permissions.service';
 import catchAsync from '../../../shared/catchAsync';
 import pick from '../../../shared/pick';
 import sendResponse from '../../../shared/sendResponse';
@@ -109,6 +112,21 @@ const updateRequisition = catchAsync(async (req: Request, res: Response) => {
       return handleValidationError(res, error);
     }
     throw error;
+  }
+
+  if (payload.status === 'approved') {
+    const userId = req.user?.userId;
+    const role = req.user?.role;
+
+    if (!userId || !role) {
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Authentication required');
+    }
+
+    await PermissionsService.assertPermission(
+      userId,
+      role,
+      PERMISSION_ACTION_APPROVE_REQUISITION
+    );
   }
 
   const attachmentPath = mapUploadedAttachment(req.file);

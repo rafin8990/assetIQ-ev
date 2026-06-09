@@ -1,27 +1,28 @@
 import express from 'express';
 
-import { auth, requireRole } from '../../middlewares/auth';
+import { auth, requireAnyPermission, requirePermission } from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
-import { ENUM_USER_ROLE } from '../../../enums/user';
+import {
+  PERMISSION_ACTION_MANAGE_PERMISSIONS,
+  PERMISSION_ACTION_MANAGE_USERS,
+} from '../permissions/permissions.constant';
 import { UsersController } from './users.controller';
 import { UsersValidation } from './users.validation';
 
 const router = express.Router();
 
-const adminRoles = [ENUM_USER_ROLE.SUPER_ADMIN, ENUM_USER_ROLE.ADMIN];
+const manageUsers = [auth, requirePermission(PERMISSION_ACTION_MANAGE_USERS)];
 
 router.post(
   '/',
-  auth,
-  requireRole(adminRoles),
+  ...manageUsers,
   validateRequest(UsersValidation.createUserZodSchema),
   UsersController.createUser
 );
 
 router.get(
   '/admins',
-  auth,
-  requireRole(adminRoles),
+  ...manageUsers,
   validateRequest(UsersValidation.getAdminsZodSchema),
   UsersController.getAdminUsers
 );
@@ -29,31 +30,31 @@ router.get(
 router.get(
   '/',
   auth,
-  requireRole(adminRoles),
+  requireAnyPermission([
+    PERMISSION_ACTION_MANAGE_USERS,
+    PERMISSION_ACTION_MANAGE_PERMISSIONS,
+  ]),
   validateRequest(UsersValidation.getAllUsersZodSchema),
   UsersController.getAllUsers
 );
 
 router.get(
   '/:id',
-  auth,
-  requireRole(adminRoles),
+  ...manageUsers,
   validateRequest(UsersValidation.getSingleUserZodSchema),
   UsersController.getSingleUser
 );
 
 router.patch(
   '/:id',
-  auth,
-  requireRole(adminRoles),
+  ...manageUsers,
   validateRequest(UsersValidation.updateUserZodSchema),
   UsersController.updateUser
 );
 
 router.delete(
   '/:id',
-  auth,
-  requireRole(adminRoles),
+  ...manageUsers,
   validateRequest(UsersValidation.deleteUserZodSchema),
   UsersController.deleteUser
 );

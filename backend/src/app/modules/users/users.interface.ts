@@ -7,6 +7,7 @@ export type IUser = {
   email: string | null;
   image: string | null;
   role: ENUM_USER_ROLE;
+  permissions?: string[];
   created_at: Date;
   updated_at: Date;
 };

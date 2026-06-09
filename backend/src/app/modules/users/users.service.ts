@@ -7,6 +7,8 @@ import { ENUM_USER_ROLE } from '../../../enums/user';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import pool from '../../../utils/dbClient';
+import { ALL_PERMISSION_KEYS } from '../permissions/permissions.constant';
+import { PermissionsService } from '../permissions/permissions.service';
 import {
   USER_PUBLIC_FIELDS,
   USERS_SORTABLE_FIELDS,
@@ -64,7 +66,19 @@ const createUser = async (payload: ICreateUserPayload): Promise<IUser> => {
     ]
   );
 
-  return result.rows[0];
+  const user = result.rows[0];
+
+  if (payload.role === ENUM_USER_ROLE.ADMIN) {
+    await PermissionsService.setUserPermissions(user.id, {
+      permissionKeys: ALL_PERMISSION_KEYS,
+    });
+  } else if (payload.role === ENUM_USER_ROLE.USER) {
+    await PermissionsService.setUserPermissions(user.id, {
+      permissionKeys: ['route.dashboard'],
+    });
+  }
+
+  return user;
 };
 
 const getAllUsers = async (
