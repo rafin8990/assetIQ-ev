@@ -1,13 +1,13 @@
-import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
 import { Request } from 'express';
+import {
+  getUploadDir,
+  getUploadDiskPath,
+  getUploadPublicPath,
+} from '../../utils/uploadPaths';
 
-const uploadDir = path.join(__dirname, '../../public/uploads/items');
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const uploadDir = getUploadDir('items');
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -59,4 +59,7 @@ export const uploadItemImages = multer({
 });
 
 export const getItemImagePublicPath = (filename: string) =>
-  `/uploads/items/${filename}`;
+  getUploadPublicPath('items', filename);
+
+export const getItemImageDiskPath = (imagePath: string) =>
+  getUploadDiskPath('items', imagePath);

@@ -1,13 +1,13 @@
-import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
 import { Request } from 'express';
+import {
+  getUploadDir,
+  getUploadDiskPath,
+  getUploadPublicPath,
+} from '../../utils/uploadPaths';
 
-const uploadDir = path.join(__dirname, '../../public/uploads/purchase-orders');
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+const uploadDir = getUploadDir('purchase-orders');
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -78,9 +78,7 @@ export const uploadPurchaseOrderAttachment = multer({
 });
 
 export const getPurchaseOrderAttachmentPublicPath = (filename: string) =>
-  `/uploads/purchase-orders/${filename}`;
+  getUploadPublicPath('purchase-orders', filename);
 
-export const getPurchaseOrderAttachmentDiskPath = (attachmentPath: string) => {
-  const filename = path.basename(attachmentPath);
-  return path.join(uploadDir, filename);
-};
+export const getPurchaseOrderAttachmentDiskPath = (attachmentPath: string) =>
+  getUploadDiskPath('purchase-orders', attachmentPath);

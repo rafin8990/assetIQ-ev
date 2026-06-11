@@ -1,9 +1,9 @@
 import fs from 'fs';
 import httpStatus from 'http-status';
-import path from 'path';
 import * as XLSX from 'xlsx';
 
 import ApiError from '../../../errors/ApiError';
+import { getItemImageDiskPath } from '../../middlewares/uploadImage';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import pool from '../../../utils/dbClient';
@@ -354,12 +354,7 @@ const deleteItem = async (id: number): Promise<IItem> => {
 };
 
 const removeImageFile = (imagePath: string) => {
-  const filename = path.basename(imagePath);
-  const filePath = path.join(
-    __dirname,
-    '../../../public/uploads/items',
-    filename
-  );
+  const filePath = getItemImageDiskPath(imagePath);
 
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);

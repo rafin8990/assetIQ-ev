@@ -7,6 +7,7 @@ import globalErrorHandler from './app/middlewares/globalErrorHandler';
 import routes from './app/routes';
 
 import cookieParser from 'cookie-parser';
+import { getPublicDir } from './utils/uploadPaths';
 
 const app: Application = express();
 app.use(cors());
@@ -14,7 +15,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.static(getPublicDir()));
 
 app.use('/api/v1', routes);
 app.use('/api/v1/rfid',
@@ -94,7 +95,7 @@ app.get('/api/v1/docs', (req: Request, res: Response) => {
 });
 
 app.get('/', (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+  res.sendFile(path.join(getPublicDir(), 'index.html'));
 });
 
 app.use(globalErrorHandler);
