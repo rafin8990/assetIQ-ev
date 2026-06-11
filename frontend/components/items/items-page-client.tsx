@@ -38,7 +38,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { ApiError } from "@/lib/api/client"
+import { ApiError, getAssetUrl } from "@/lib/api/client"
 import { getBrands } from "@/services/brands"
 import { getCategories } from "@/services/categories"
 import {
@@ -389,7 +389,10 @@ export function ItemsPageClient() {
                   </td>
                 </tr>
               ) : (
-                items.map(item => (
+                items.map(item => {
+                  const imageUrl = getAssetUrl(item.images?.[0]?.image)
+
+                  return (
                   <tr key={item.id} className="transition-colors hover:bg-[#f8f9fb]">
                     <td className="px-5 py-3.5 font-medium text-[#373B44]">
                       {item.id}
@@ -397,10 +400,17 @@ export function ItemsPageClient() {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="size-10 overflow-hidden rounded-lg border border-[#e8eaed] bg-[#f8f9fb]">
-                          {/* images not in list response - show placeholder */}
-                          <div className="flex size-full items-center justify-center text-[#8b95a5]">
-                            <Package className="size-4" />
-                          </div>
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={item.name}
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex size-full items-center justify-center text-[#8b95a5]">
+                              <Package className="size-4" />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <p className="font-medium text-[#373B44]">{item.name}</p>
@@ -463,7 +473,8 @@ export function ItemsPageClient() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>

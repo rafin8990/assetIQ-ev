@@ -76,7 +76,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     key: 'route.procurement.stock',
     name: 'Stock',
     type: 'route',
-    group: 'Procurement',
+    group: 'Inventory',
     href: '/stock',
   },
   {
@@ -144,7 +144,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     key: 'action.stocks.manage',
     name: 'Manage Stock',
     type: 'action',
-    group: 'Procurement',
+    group: 'Inventory',
     module: 'stocks',
     relatedRouteKey: 'route.procurement.stock',
   },

@@ -4,6 +4,7 @@ import {
   ShoppingCart,
   Truck,
   Users,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react"
 
@@ -45,12 +46,16 @@ export const sidebarNavSections: NavSection[] = [
         ],
       },
       {
+        title: "Inventory",
+        icon: Warehouse,
+        children: [{ title: "Stock", href: "/stock" }],
+      },
+      {
         title: "Procurement",
         icon: ShoppingCart,
         children: [
           { title: "Requisition", href: "/requisitions" },
           { title: "Purchase Order", href: "/purchase-orders" },
-          { title: "Stock", href: "/stock" },
           { title: "Vendor", href: "/vendor" },
           {
             title: "Report",

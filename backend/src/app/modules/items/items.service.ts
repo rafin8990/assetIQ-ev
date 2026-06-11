@@ -105,6 +105,29 @@ const getItemImages = async (itemId: number): Promise<IItemImage[]> => {
   return result.rows;
 };
 
+const getItemImagesByItemIds = async (
+  itemIds: number[]
+): Promise<Map<number, IItemImage[]>> => {
+  if (!itemIds.length) return new Map();
+
+  const result = await pool.query<IItemImage>(
+    `SELECT id, item_id, image FROM item_images
+     WHERE item_id = ANY($1::int[])
+     ORDER BY item_id ASC, id ASC`,
+    [itemIds]
+  );
+
+  const imagesByItemId = new Map<number, IItemImage[]>();
+
+  for (const row of result.rows) {
+    const images = imagesByItemId.get(row.item_id) ?? [];
+    images.push(row);
+    imagesByItemId.set(row.item_id, images);
+  }
+
+  return imagesByItemId;
+};
+
 const insertItemImages = async (
   itemId: number,
   imagePaths: string[]
@@ -219,6 +242,13 @@ const getAllItems = async (
     dataValues
   );
 
+  const itemIds = dataResult.rows.map(row => row.id);
+  const imagesByItemId = await getItemImagesByItemIds(itemIds);
+  const data = dataResult.rows.map(row => ({
+    ...row,
+    images: imagesByItemId.get(row.id) ?? [],
+  }));
+
   return {
     meta: {
       page,
@@ -226,7 +256,7 @@ const getAllItems = async (
       total,
       ...paginationHelpers.calculatePaginationMetadata(page, limit, total),
     },
-    data: dataResult.rows,
+    data,
   };
 };
 
