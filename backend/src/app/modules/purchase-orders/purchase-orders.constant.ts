@@ -3,6 +3,7 @@ export const PURCHASE_ORDERS_FILTERABLE_FIELDS = [
   'status',
   'orderType',
   'createdBy',
+  'vendorId',
 ];
 
 export const PURCHASE_ORDER_STATUSES = [
@@ -10,7 +11,19 @@ export const PURCHASE_ORDER_STATUSES = [
   'approved',
   'cancelled',
   'received',
+  'in_staging',
+  'partially_received',
+  'fully_received',
 ] as const;
+
+export const STAGING_PURCHASE_ORDER_STATUSES = [
+  'approved',
+  'in_staging',
+  'partially_received',
+  'fully_received',
+] as const;
+
+export const STAGING_FILTERABLE_FIELDS = ['searchTerm', 'status'];
 
 export const PURCHASE_ORDER_TYPES = ['by_requisition', 'direct'] as const;
 

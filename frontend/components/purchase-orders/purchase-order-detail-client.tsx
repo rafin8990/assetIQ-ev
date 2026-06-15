@@ -26,6 +26,7 @@ import {
   formatDate,
   formatOrderType,
   formatStatus,
+  formatVendorDisplay,
   getStatusBadgeClass,
 } from "@/components/purchase-orders/purchase-order-constants"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -56,12 +57,13 @@ import {
   cancelPurchaseOrder,
   deletePurchaseOrder,
   getPurchaseOrder,
-  receivePurchaseOrder,
 } from "@/services/purchase-orders"
 import { getUnits } from "@/services/units"
+import { getVendors } from "@/services/vendors"
 import type { Item } from "@/types/items"
 import type { PurchaseOrder } from "@/types/purchase-orders"
 import type { Unit } from "@/types/units"
+import type { Vendor } from "@/types/vendors"
 
 type PurchaseOrderDetailClientProps = {
   purchaseOrderId: number
@@ -95,6 +97,7 @@ export function PurchaseOrderDetailClient({
     React.useState<PurchaseOrder | null>(null)
   const [items, setItems] = React.useState<Item[]>([])
   const [units, setUnits] = React.useState<Unit[]>([])
+  const [vendors, setVendors] = React.useState<Vendor[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -103,7 +106,6 @@ export function PurchaseOrderDetailClient({
   const [editOpen, setEditOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [approveOpen, setApproveOpen] = React.useState(false)
-  const [receiveOpen, setReceiveOpen] = React.useState(false)
   const [cancelOpen, setCancelOpen] = React.useState(false)
 
   const fetchData = React.useCallback(async () => {
@@ -111,15 +113,17 @@ export function PurchaseOrderDetailClient({
     setError(null)
 
     try {
-      const [poData, itemsRes, unitsRes] = await Promise.all([
+      const [poData, itemsRes, unitsRes, vendorsRes] = await Promise.all([
         getPurchaseOrder(purchaseOrderId),
         getItems({ limit: 200, sortBy: "name", sortOrder: "asc" }),
         getUnits({ limit: 100, sortBy: "name", sortOrder: "asc" }),
+        getVendors({ limit: 200, sortBy: "vendor_name", sortOrder: "asc" }),
       ])
 
       setPurchaseOrder(poData)
       setItems(itemsRes.data)
       setUnits(unitsRes.data)
+      setVendors(vendorsRes.data)
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -155,29 +159,6 @@ export function PurchaseOrderDetailClient({
           : err instanceof Error
             ? err.message
             : "Failed to approve purchase order"
-      setFormError(message)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleReceive = async () => {
-    if (!purchaseOrder || !authUser) return
-
-    setIsSubmitting(true)
-    setFormError(null)
-
-    try {
-      await receivePurchaseOrder(purchaseOrder.id, authUser.id)
-      setReceiveOpen(false)
-      await fetchData()
-    } catch (err) {
-      const message =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : "Failed to mark purchase order as received"
       setFormError(message)
     } finally {
       setIsSubmitting(false)
@@ -320,16 +301,13 @@ export function PurchaseOrderDetailClient({
           )}
 
           {canReceivePurchaseOrder(authUser, purchaseOrder.status) && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setFormError(null)
-                setReceiveOpen(true)
-              }}
+            <Link
+              href={`/procurement/po-receiving/${purchaseOrder.id}`}
+              className={cn(buttonVariants({ variant: "outline" }))}
             >
               <PackageCheck />
-              Receive
-            </Button>
+              Go to Receiving
+            </Link>
           )}
 
           {canCancelPurchaseOrder(purchaseOrder.status) && (
@@ -384,6 +362,10 @@ export function PurchaseOrderDetailClient({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <DetailField
+          label="Vendor"
+          value={formatVendorDisplay(purchaseOrder)}
+        />
+        <DetailField
           label="Created By"
           value={
             purchaseOrder.created_by_name ?? `#${purchaseOrder.created_by}`
@@ -399,12 +381,10 @@ export function PurchaseOrderDetailClient({
           }
         />
         <DetailField
-          label="Received By"
+          label="Staged By"
           value={
-            purchaseOrder.received_by_name ??
-            (purchaseOrder.received_by
-              ? `#${purchaseOrder.received_by}`
-              : "—")
+            purchaseOrder.staged_by_name ??
+            (purchaseOrder.staged_by ? `#${purchaseOrder.staged_by}` : "—")
           }
         />
         <DetailField
@@ -460,6 +440,12 @@ export function PurchaseOrderDetailClient({
                 <th className="px-5 py-3 font-semibold text-[#373B44]">#</th>
                 <th className="px-5 py-3 font-semibold text-[#373B44]">Item</th>
                 <th className="px-5 py-3 font-semibold text-[#373B44]">Qty</th>
+                <th className="px-5 py-3 font-semibold text-[#373B44]">
+                  Received
+                </th>
+                <th className="px-5 py-3 font-semibold text-[#373B44]">
+                  Returned
+                </th>
                 <th className="px-5 py-3 font-semibold text-[#373B44]">Unit</th>
                 <th className="px-5 py-3 font-semibold text-[#373B44]">
                   Unit Price
@@ -483,6 +469,12 @@ export function PurchaseOrderDetailClient({
                     {item.quantity}
                   </td>
                   <td className="px-5 py-3.5 text-[#5c6370]">
+                    {item.received_quantity ?? 0}
+                  </td>
+                  <td className="px-5 py-3.5 text-[#5c6370]">
+                    {item.returned_quantity ?? 0}
+                  </td>
+                  <td className="px-5 py-3.5 text-[#5c6370]">
                     {item.unit_name ?? (item.unit_id ? `Unit #${item.unit_id}` : "—")}
                   </td>
                   <td className="px-5 py-3.5 text-[#5c6370]">
@@ -500,7 +492,7 @@ export function PurchaseOrderDetailClient({
             <tfoot>
               <tr className="border-t border-[#e8eaed] bg-[#f8f9fb]">
                 <td
-                  colSpan={6}
+                  colSpan={8}
                   className="px-5 py-3.5 text-right font-semibold text-[#373B44]"
                 >
                   Grand Total
@@ -536,6 +528,7 @@ export function PurchaseOrderDetailClient({
         purchaseOrder={purchaseOrder}
         items={items}
         units={units}
+        vendors={vendors}
         onSuccess={fetchData}
       />
 
@@ -567,35 +560,6 @@ export function PurchaseOrderDetailClient({
             >
               {isSubmitting && <Loader2 className="animate-spin" />}
               Approve
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={receiveOpen} onOpenChange={setReceiveOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Mark as Received</DialogTitle>
-            <DialogDescription>
-              Confirm goods received for {purchaseOrder.po_number}?
-            </DialogDescription>
-          </DialogHeader>
-          {formError && (
-            <DialogBody>
-              <p className="text-sm text-red-600">{formError}</p>
-            </DialogBody>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setReceiveOpen(false)}
-              disabled={isSubmitting}
-            >
-              Close
-            </Button>
-            <Button onClick={handleReceive} disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="animate-spin" />}
-              Confirm Received
             </Button>
           </DialogFooter>
         </DialogContent>

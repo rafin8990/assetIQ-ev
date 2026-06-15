@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   PURCHASE_ORDER_STATUSES,
   PURCHASE_ORDER_TYPES,
+  STAGING_PURCHASE_ORDER_STATUSES,
 } from './purchase-orders.constant';
 
 const optionalAmountSchema = z
@@ -44,6 +45,12 @@ export const createPurchaseOrderBodySchema = z.object({
     .number()
     .int({ error: 'Approved by must be an integer' })
     .positive({ error: 'Approved by must be positive' })
+    .nullable()
+    .optional(),
+  vendor_id: z
+    .number()
+    .int({ error: 'Vendor id must be an integer' })
+    .positive({ error: 'Vendor id must be positive' })
     .nullable()
     .optional(),
   received_by: z
@@ -95,6 +102,12 @@ export const updatePurchaseOrderBodySchema = z
       .positive({ error: 'Approved by must be positive' })
       .nullable()
       .optional(),
+    vendor_id: z
+      .number()
+      .int({ error: 'Vendor id must be an integer' })
+      .positive({ error: 'Vendor id must be positive' })
+      .nullable()
+      .optional(),
     received_by: z
       .number()
       .int({ error: 'Received by must be an integer' })
@@ -121,6 +134,7 @@ const getAllPurchaseOrdersZodSchema = z.object({
     status: z.enum(PURCHASE_ORDER_STATUSES).optional(),
     orderType: z.enum(PURCHASE_ORDER_TYPES).optional(),
     createdBy: z.string().optional(),
+    vendorId: z.string().optional(),
   }),
 });
 
@@ -173,6 +187,86 @@ const getMonthwiseReportZodSchema = z.object({
   }),
 });
 
+const stagingReceiptItemSchema = z.object({
+  po_item_id: z
+    .number({ error: 'PO item id is required' })
+    .int({ error: 'PO item id must be an integer' })
+    .positive({ error: 'PO item id must be positive' }),
+  quantity: z
+    .number({ error: 'Quantity is required' })
+    .positive({ error: 'Quantity must be greater than zero' }),
+});
+
+const vendorReturnItemSchema = z.object({
+  po_item_id: z
+    .number({ error: 'PO item id is required' })
+    .int({ error: 'PO item id must be an integer' })
+    .positive({ error: 'PO item id must be positive' }),
+  quantity: z
+    .number({ error: 'Quantity is required' })
+    .positive({ error: 'Quantity must be greater than zero' }),
+  reason: z
+    .string({ error: 'Reason is required' })
+    .trim()
+    .min(1, { error: 'Reason is required' })
+    .max(1000, { error: 'Reason must not exceed 1000 characters' }),
+});
+
+const getStagingPurchaseOrdersZodSchema = z.object({
+  query: z.object({
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    searchTerm: z.string().optional(),
+    status: z.enum(STAGING_PURCHASE_ORDER_STATUSES).optional(),
+  }),
+});
+
+const stagingPoIdParamsSchema = z.object({
+  params: z.object({
+    id: z
+      .string({ error: 'Purchase order id is required' })
+      .regex(/^\d+$/, { error: 'Invalid purchase order id' }),
+  }),
+});
+
+const recordStagingReceiptZodSchema = stagingPoIdParamsSchema.extend({
+  body: z.object({
+    items: z
+      .array(stagingReceiptItemSchema)
+      .min(1, { error: 'At least one item is required' }),
+  }),
+});
+
+const returnToVendorZodSchema = stagingPoIdParamsSchema.extend({
+  body: z.object({
+    items: z
+      .array(vendorReturnItemSchema)
+      .min(1, { error: 'At least one item is required' }),
+  }),
+});
+
+const stagingAcceptItemSchema = z.object({
+  po_item_id: z
+    .number({ error: 'PO item id is required' })
+    .int({ error: 'PO item id must be an integer' })
+    .positive({ error: 'PO item id must be positive' }),
+  quantity: z
+    .number({ error: 'Quantity is required' })
+    .positive({ error: 'Quantity must be greater than zero' }),
+  location_id: z
+    .number({ error: 'Location is required' })
+    .int({ error: 'Location must be an integer' })
+    .positive({ error: 'Location must be positive' }),
+});
+
+const acceptStagingToStockZodSchema = stagingPoIdParamsSchema.extend({
+  body: z.object({
+    items: z
+      .array(stagingAcceptItemSchema)
+      .min(1, { error: 'At least one item is required' }),
+  }),
+});
+
 export const PurchaseOrdersValidation = {
   getAllPurchaseOrdersZodSchema,
   getSinglePurchaseOrderZodSchema,
@@ -181,4 +275,10 @@ export const PurchaseOrdersValidation = {
   getDateRangeReportZodSchema,
   getDuePaidReportZodSchema,
   getMonthwiseReportZodSchema,
+  getStagingPurchaseOrdersZodSchema,
+  getStagingDetailZodSchema: stagingPoIdParamsSchema,
+  recordStagingReceiptZodSchema,
+  returnToVendorZodSchema,
+  acceptStagingToStockZodSchema,
+  getVendorReturnsZodSchema: stagingPoIdParamsSchema,
 };

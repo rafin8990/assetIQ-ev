@@ -1,6 +1,13 @@
 import { apiFormRequest, apiRequest } from "@/lib/api/client"
 import type { PaginationMeta } from "@/lib/api/types"
 import type {
+  StagingAcceptItemPayload,
+  StagingPurchaseOrder,
+  StagingPurchaseOrdersListParams,
+  StagingReceiptItemPayload,
+  VendorReturnItemPayload,
+} from "@/types/purchase-order-staging"
+import type {
   CreatePurchaseOrderPayload,
   PurchaseOrder,
   PurchaseOrdersListParams,
@@ -18,6 +25,7 @@ function buildQuery(params: PurchaseOrdersListParams) {
   if (params.status) search.set("status", params.status)
   if (params.orderType) search.set("orderType", params.orderType)
   if (params.createdBy) search.set("createdBy", String(params.createdBy))
+  if (params.vendorId) search.set("vendorId", String(params.vendorId))
 
   const query = search.toString()
   return query ? `?${query}` : ""
@@ -54,6 +62,15 @@ function appendPurchaseOrderToFormData(
       payload.discount_amount === null || payload.discount_amount === undefined
         ? ""
         : String(payload.discount_amount)
+    )
+  }
+
+  if (Object.prototype.hasOwnProperty.call(payload, "vendor_id")) {
+    formData.append(
+      "vendor_id",
+      payload.vendor_id === null || payload.vendor_id === undefined
+        ? ""
+        : String(payload.vendor_id)
     )
   }
 
@@ -152,13 +169,76 @@ export async function cancelPurchaseOrder(id: number) {
   return response.data as PurchaseOrder
 }
 
-export async function receivePurchaseOrder(id: number, receivedBy: number) {
-  const response = await apiRequest<PurchaseOrder>(
-    `/purchase-orders/${id}/receive`,
+function buildStagingQuery(params: StagingPurchaseOrdersListParams) {
+  const search = new URLSearchParams()
+
+  if (params.page) search.set("page", String(params.page))
+  if (params.limit) search.set("limit", String(params.limit))
+  if (params.searchTerm) search.set("searchTerm", params.searchTerm)
+  if (params.status) search.set("status", params.status)
+
+  const query = search.toString()
+  return query ? `?${query}` : ""
+}
+
+export async function getStagingPurchaseOrders(
+  params: StagingPurchaseOrdersListParams = {}
+) {
+  const response = await apiRequest<StagingPurchaseOrder[]>(
+    `/purchase-orders/staging${buildStagingQuery(params)}`
+  )
+
+  return {
+    data: response.data ?? [],
+    meta: response.meta as PaginationMeta,
+  }
+}
+
+export async function getStagingDetail(id: number) {
+  const response = await apiRequest<StagingPurchaseOrder>(
+    `/purchase-orders/${id}/staging`
+  )
+  return response.data as StagingPurchaseOrder
+}
+
+export async function recordStagingReceipt(
+  id: number,
+  items: StagingReceiptItemPayload[]
+) {
+  const response = await apiRequest<StagingPurchaseOrder>(
+    `/purchase-orders/${id}/staging/receive`,
     {
-      method: "PATCH",
-      body: JSON.stringify({ received_by: receivedBy }),
+      method: "POST",
+      body: JSON.stringify({ items }),
     }
   )
-  return response.data as PurchaseOrder
+  return response.data as StagingPurchaseOrder
+}
+
+export async function returnToVendor(
+  id: number,
+  items: VendorReturnItemPayload[]
+) {
+  const response = await apiRequest<StagingPurchaseOrder>(
+    `/purchase-orders/${id}/staging/returns`,
+    {
+      method: "POST",
+      body: JSON.stringify({ items }),
+    }
+  )
+  return response.data as StagingPurchaseOrder
+}
+
+export async function acceptStagingToStock(
+  id: number,
+  payload: { items: StagingAcceptItemPayload[] }
+) {
+  const response = await apiRequest<StagingPurchaseOrder>(
+    `/purchase-orders/${id}/staging/accept`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  )
+  return response.data as StagingPurchaseOrder
 }

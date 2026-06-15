@@ -33,6 +33,7 @@ import type { Item } from "@/types/items"
 import type { PurchaseOrder, PurchaseOrderType } from "@/types/purchase-orders"
 import type { Requisition } from "@/types/requisitions"
 import type { Unit } from "@/types/units"
+import type { Vendor } from "@/types/vendors"
 
 type FormMode = "create" | "edit"
 
@@ -52,6 +53,7 @@ type PurchaseOrderFormModalProps = {
   purchaseOrder?: PurchaseOrder | null
   items: Item[]
   units: Unit[]
+  vendors: Vendor[]
   onSuccess: () => void
   onCreated?: (purchaseOrder: PurchaseOrder) => void
 }
@@ -132,10 +134,12 @@ export function PurchaseOrderFormModal({
   purchaseOrder,
   items,
   units,
+  vendors,
   onSuccess,
   onCreated,
 }: PurchaseOrderFormModalProps) {
   const [description, setDescription] = React.useState("")
+  const [vendorId, setVendorId] = React.useState("")
   const [orderType, setOrderType] =
     React.useState<PurchaseOrderType>("by_requisition")
   const [paidAmount, setPaidAmount] = React.useState("")
@@ -160,6 +164,9 @@ export function PurchaseOrderFormModal({
 
     if (mode === "edit" && purchaseOrder) {
       setDescription(purchaseOrder.description ?? "")
+      setVendorId(
+        purchaseOrder.vendor_id ? String(purchaseOrder.vendor_id) : ""
+      )
       setOrderType(purchaseOrder.order_type)
       setPaidAmount(
         purchaseOrder.paid_amount !== null
@@ -174,6 +181,7 @@ export function PurchaseOrderFormModal({
       setLineItems(rowsFromPurchaseOrder(purchaseOrder))
     } else {
       setDescription("")
+      setVendorId("")
       setOrderType("by_requisition")
       setPaidAmount("")
       setDiscountAmount("")
@@ -343,6 +351,7 @@ export function PurchaseOrderFormModal({
 
     const basePayload = {
       description: description.trim() || null,
+      vendor_id: vendorId ? Number(vendorId) : null,
       order_type: orderType,
       paid_amount: parseOptionalNumber(paidAmount),
       discount_amount: parseOptionalNumber(discountAmount),
@@ -430,6 +439,31 @@ export function PurchaseOrderFormModal({
                   className={textareaClassName}
                   disabled={isSubmitting}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="po-vendor"
+                  className="text-sm font-medium text-[#373B44]"
+                >
+                  Vendor
+                </label>
+                <select
+                  id="po-vendor"
+                  value={vendorId}
+                  onChange={e => setVendorId(e.target.value)}
+                  className={selectClassName}
+                  disabled={isSubmitting}
+                >
+                  <option value="">No vendor selected</option>
+                  {vendors.map(vendor => (
+                    <option key={vendor.id} value={vendor.id}>
+                      {vendor.company_name
+                        ? `${vendor.vendor_name} (${vendor.company_name})`
+                        : vendor.vendor_name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-2">

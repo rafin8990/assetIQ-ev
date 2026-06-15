@@ -48,6 +48,7 @@ import {
 import { ApiError } from "@/lib/api/client"
 import { getAuthUser } from "@/lib/auth/token"
 import { getItems } from "@/services/items"
+import { getLocations } from "@/services/locations"
 import {
   deleteOutRequest,
   getOutRequest,
@@ -55,6 +56,7 @@ import {
 } from "@/services/out-requests"
 import { getUnits } from "@/services/units"
 import type { Item } from "@/types/items"
+import type { Location } from "@/types/locations"
 import type { OutRequest, OutRequestStatus } from "@/types/out-requests"
 import type { Unit } from "@/types/units"
 
@@ -66,6 +68,7 @@ export function OutRequestsPageClient() {
   const [outRequests, setOutRequests] = React.useState<OutRequest[]>([])
   const [items, setItems] = React.useState<Item[]>([])
   const [units, setUnits] = React.useState<Unit[]>([])
+  const [locations, setLocations] = React.useState<Location[]>([])
 
   const [page, setPage] = React.useState(1)
   const [totalPages, setTotalPages] = React.useState(1)
@@ -95,15 +98,18 @@ export function OutRequestsPageClient() {
 
   const fetchLookups = React.useCallback(async () => {
     try {
-      const [itemsRes, unitsRes] = await Promise.all([
+      const [itemsRes, unitsRes, locationsRes] = await Promise.all([
         getItems({ limit: 200, sortBy: "name", sortOrder: "asc" }),
         getUnits({ limit: 100, sortBy: "name", sortOrder: "asc" }),
+        getLocations({ limit: 200, sortBy: "name", sortOrder: "asc" }),
       ])
       setItems(itemsRes.data)
       setUnits(unitsRes.data)
+      setLocations(locationsRes.data)
     } catch {
       setItems([])
       setUnits([])
+      setLocations([])
     }
   }, [])
 
@@ -477,6 +483,7 @@ export function OutRequestsPageClient() {
         outRequest={selectedOutRequest}
         items={items}
         units={units}
+        locations={locations}
         onSuccess={fetchOutRequests}
         onCreated={handleCreated}
       />

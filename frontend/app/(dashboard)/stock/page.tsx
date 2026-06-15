@@ -1,9 +1,5 @@
-import type { Metadata } from "next"
-
-import { StocksPageClient } from "@/components/stocks/stocks-page-client"
-
-export const metadata: Metadata = { title: "Stock" }
+import { redirect } from "next/navigation"
 
 export default function StockPage() {
-  return <StocksPageClient />
+  redirect("/inventory/total-stock")
 }

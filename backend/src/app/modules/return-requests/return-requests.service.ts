@@ -5,9 +5,9 @@ import { generateReturnRequestId } from '../../../helpers/returnRequestIdHelper'
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import pool from '../../../utils/dbClient';
+import { InventoryService } from '../inventory/inventory.service';
 import { ItemsService } from '../items/items.service';
 import { OutRequestsService } from '../out-requests/out-requests.service';
-import { StocksService } from '../stocks/stocks.service';
 import { UnitsService } from '../units/units.service';
 import { PERMISSION_ACTION_DELETE_ANY_RETURN } from '../permissions/permissions.constant';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -492,13 +492,20 @@ const approveReturnRequest = async (
     id
   );
 
+  const outRequest = await OutRequestsService.getSingleOutRequest(
+    existing.out_request_id
+  );
+
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    await StocksService.increaseStockFromReturnItems(
+    await InventoryService.increaseFromReturnItems(
       client,
+      outRequest.source_location_id,
+      id,
+      existing.out_request_id,
       existing.items.map(item => ({
         item_id: item.item_id,
         quantity: Number(item.return_quantity),

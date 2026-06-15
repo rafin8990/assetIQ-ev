@@ -80,6 +80,7 @@ export const parseCreatePurchaseOrderFormBody = (
     paid_amount: parseOptionalAmount(body.paid_amount),
     discount_amount: parseOptionalAmount(body.discount_amount),
     approved_by: parseOptionalInt(body.approved_by),
+    vendor_id: parseOptionalInt(body.vendor_id),
     received_by: parseOptionalInt(body.received_by),
     order_type:
       body.order_type !== undefined ? String(body.order_type) : undefined,
@@ -126,6 +127,10 @@ export const parseUpdatePurchaseOrderFormBody = (
 
   if (body.approved_by !== undefined) {
     payload.approved_by = parseOptionalInt(body.approved_by);
+  }
+
+  if (body.vendor_id !== undefined) {
+    payload.vendor_id = parseOptionalInt(body.vendor_id);
   }
 
   if (body.received_by !== undefined) {

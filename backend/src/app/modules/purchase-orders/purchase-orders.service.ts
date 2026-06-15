@@ -9,8 +9,8 @@ import pool from '../../../utils/dbClient';
 import { getPurchaseOrderAttachmentDiskPath } from '../../middlewares/uploadPurchaseOrderAttachment';
 import { ItemsService } from '../items/items.service';
 import { UnitsService } from '../units/units.service';
-import { StocksService } from '../stocks/stocks.service';
 import { UsersService } from '../users/users.service';
+import { VendorsService } from '../vendors/vendors.service';
 import {
   PURCHASE_ORDERS_SORTABLE_FIELDS,
   PURCHASE_ORDERS_SORT_COLUMN_MAP,
@@ -29,22 +29,28 @@ import {
   PurchaseOrderStatus,
   IUpdatePurchaseOrderPayload,
 } from './purchase-orders.interface';
+import { PATCH_BLOCKED_STATUSES } from './purchase-orders.staging.helpers';
 
 const PO_SELECT_FIELDS = `
-  po.id, po.po_number, po.created_by, po.description, po.status,
+  po.id, po.po_number, po.created_by, po.vendor_id, po.description, po.status,
   po.total_amount, po.paid_amount, po.due_amount, po.discount_amount,
-  po.attachment, po.approved_by, po.received_by, po.order_type,
-  po.created_at, po.updated_at,
+  po.attachment, po.approved_by, po.received_by, po.staged_by, po.staged_at,
+  po.order_type, po.created_at, po.updated_at,
   creator.name AS created_by_name,
+  vendor.vendor_name AS vendor_name,
+  vendor.company_name AS vendor_company_name,
   approver.name AS approved_by_name,
-  receiver.name AS received_by_name
+  receiver.name AS received_by_name,
+  stager.name AS staged_by_name
 `;
 
 const PO_JOINS = `
   FROM purchase_orders po
   LEFT JOIN users creator ON creator.id = po.created_by
+  LEFT JOIN vendors vendor ON vendor.id = po.vendor_id
   LEFT JOIN users approver ON approver.id = po.approved_by
   LEFT JOIN users receiver ON receiver.id = po.received_by
+  LEFT JOIN users stager ON stager.id = po.staged_by
 `;
 
 const getPoRequisitions = async (
@@ -77,8 +83,9 @@ const getPoRequisitions = async (
 const getPoItems = async (poId: number): Promise<IPoItemWithRelations[]> => {
   const result = await pool.query<IPoItemWithRelations>(
     `SELECT
-      pi.id, pi.po_id, pi.item_id, pi.quantity, pi.unit_id,
-      pi.per_unit_amount, pi.total_amount, pi.discount_amount,
+      pi.id, pi.po_id, pi.item_id, pi.quantity,
+      pi.received_quantity, pi.returned_quantity,
+      pi.unit_id, pi.per_unit_amount, pi.total_amount, pi.discount_amount,
       pi.created_at, pi.updated_at,
       i.name AS item_name,
       u.name AS unit_name
@@ -118,27 +125,39 @@ const validateUserRefs = async (payload: {
   }
 };
 
+const validateVendorRef = async (vendorId?: number | null) => {
+  if (vendorId) {
+    await VendorsService.getSingleVendor(vendorId);
+  }
+};
+
 const validateStatusTransition = (
   currentStatus: PurchaseOrderStatus,
   nextStatus: PurchaseOrderStatus
 ) => {
   if (currentStatus === nextStatus) return;
 
-  if (currentStatus === 'cancelled' || currentStatus === 'received') {
+  if (
+    currentStatus === 'cancelled' ||
+    currentStatus === 'received' ||
+    currentStatus === 'partially_received' ||
+    currentStatus === 'fully_received' ||
+    currentStatus === 'in_staging'
+  ) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       `Cannot change status from ${currentStatus}`
     );
   }
 
-  if (nextStatus === 'received' && currentStatus !== 'approved') {
+  if (PATCH_BLOCKED_STATUSES.includes(nextStatus)) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'Purchase order must be approved before marking as received'
+      `Status ${nextStatus} can only be set through staging workflow endpoints`
     );
   }
 
-  if (currentStatus === 'pending' && nextStatus === 'received') {
+  if (nextStatus === 'received' && currentStatus !== 'approved') {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'Purchase order must be approved before marking as received'
@@ -269,6 +288,7 @@ const createPurchaseOrder = async (
   attachmentPath: string | null = null
 ): Promise<IPurchaseOrderWithRelations> => {
   await validateUserRefs(payload);
+  await validateVendorRef(payload.vendor_id);
   await validatePoItems(payload.items);
 
   const amounts = calculatePurchaseOrderAmounts(
@@ -288,14 +308,15 @@ const createPurchaseOrder = async (
 
     const result = await client.query<IPurchaseOrder>(
       `INSERT INTO purchase_orders (
-        po_number, created_by, description, status,
+        po_number, created_by, vendor_id, description, status,
         total_amount, paid_amount, due_amount, discount_amount,
         attachment, approved_by, received_by, order_type
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *`,
       [
         poNumber,
         payload.created_by,
+        payload.vendor_id ?? null,
         payload.description ?? null,
         status,
         amounts.total_amount,
@@ -361,7 +382,7 @@ const getAllPurchaseOrders = async (
     values.push(`%${filters.searchTerm}%`);
     const index = values.length;
     conditions.push(
-      `(po.po_number ILIKE $${index} OR po.description ILIKE $${index} OR creator.name ILIKE $${index})`
+      `(po.po_number ILIKE $${index} OR po.description ILIKE $${index} OR creator.name ILIKE $${index} OR vendor.vendor_name ILIKE $${index} OR vendor.company_name ILIKE $${index})`
     );
   }
 
@@ -378,6 +399,11 @@ const getAllPurchaseOrders = async (
   if (filters.createdBy) {
     values.push(filters.createdBy);
     conditions.push(`po.created_by = $${values.length}`);
+  }
+
+  if (filters.vendorId) {
+    values.push(filters.vendorId);
+    conditions.push(`po.vendor_id = $${values.length}`);
   }
 
   const whereClause = conditions.length
@@ -452,6 +478,7 @@ const updatePurchaseOrder = async (
   }
 
   await validateUserRefs(payload);
+  await validateVendorRef(payload.vendor_id);
 
   if (payload.items?.length) {
     await validatePoItems(payload.items);
@@ -489,6 +516,11 @@ const updatePurchaseOrder = async (
     if (payload.created_by !== undefined) {
       values.push(payload.created_by);
       fields.push(`created_by = $${values.length}`);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, 'vendor_id')) {
+      values.push(payload.vendor_id ?? null);
+      fields.push(`vendor_id = $${values.length}`);
     }
 
     if (payload.description !== undefined) {
@@ -560,24 +592,6 @@ const updatePurchaseOrder = async (
       await insertPoItems(client, id, payload.items);
     }
 
-    const isReceiving =
-      payload.status === 'received' && existing.status !== 'received';
-
-    if (isReceiving) {
-      const itemsForStock = payload.items
-        ? payload.items
-        : existing.items.map(item => ({
-            item_id: item.item_id,
-            quantity: Number(item.quantity),
-            unit_id: item.unit_id,
-          }));
-
-      await StocksService.increaseStockFromPurchaseOrderItems(
-        client,
-        itemsForStock
-      );
-    }
-
     await client.query('COMMIT');
 
     if (oldAttachmentToRemove) {
@@ -625,6 +639,15 @@ const approvePurchaseOrder = async (
   id: number,
   approvedBy: number
 ): Promise<IPurchaseOrderWithRelations> => {
+  const existing = await getSinglePurchaseOrder(id);
+
+  if (existing.status !== 'pending') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Only pending purchase orders can be approved'
+    );
+  }
+
   return updatePurchaseOrder(id, {
     status: 'approved',
     approved_by: approvedBy,
@@ -635,6 +658,14 @@ const cancelPurchaseOrder = async (
   id: number
 ): Promise<IPurchaseOrderWithRelations> => {
   const existing = await getSinglePurchaseOrder(id);
+
+  if (existing.status !== 'pending' && existing.status !== 'approved') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Only pending or approved purchase orders can be cancelled'
+    );
+  }
+
   const client = await pool.connect();
 
   try {
@@ -660,16 +691,6 @@ const cancelPurchaseOrder = async (
   }
 };
 
-const receivePurchaseOrder = async (
-  id: number,
-  receivedBy: number
-): Promise<IPurchaseOrderWithRelations> => {
-  return updatePurchaseOrder(id, {
-    status: 'received',
-    received_by: receivedBy,
-  });
-};
-
 export const PurchaseOrdersService = {
   createPurchaseOrder,
   getAllPurchaseOrders,
@@ -678,5 +699,4 @@ export const PurchaseOrdersService = {
   deletePurchaseOrder,
   approvePurchaseOrder,
   cancelPurchaseOrder,
-  receivePurchaseOrder,
 };

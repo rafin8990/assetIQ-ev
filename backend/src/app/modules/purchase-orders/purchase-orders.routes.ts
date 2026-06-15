@@ -49,6 +49,54 @@ router.get(
 );
 
 router.get(
+  '/staging',
+  auth,
+  requirePermission(PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER),
+  validateRequest(PurchaseOrdersValidation.getStagingPurchaseOrdersZodSchema),
+  PurchaseOrdersController.getStagingPurchaseOrders
+);
+
+router.get(
+  '/:id/staging/returns',
+  auth,
+  requirePermission(PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER),
+  validateRequest(PurchaseOrdersValidation.getVendorReturnsZodSchema),
+  PurchaseOrdersController.getVendorReturns
+);
+
+router.get(
+  '/:id/staging',
+  auth,
+  requirePermission(PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER),
+  validateRequest(PurchaseOrdersValidation.getStagingDetailZodSchema),
+  PurchaseOrdersController.getStagingDetail
+);
+
+router.post(
+  '/:id/staging/receive',
+  auth,
+  requirePermission(PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER),
+  validateRequest(PurchaseOrdersValidation.recordStagingReceiptZodSchema),
+  PurchaseOrdersController.recordStagingReceipt
+);
+
+router.post(
+  '/:id/staging/returns',
+  auth,
+  requirePermission(PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER),
+  validateRequest(PurchaseOrdersValidation.returnToVendorZodSchema),
+  PurchaseOrdersController.returnToVendor
+);
+
+router.post(
+  '/:id/staging/accept',
+  auth,
+  requirePermission(PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER),
+  validateRequest(PurchaseOrdersValidation.acceptStagingToStockZodSchema),
+  PurchaseOrdersController.acceptStagingToStock
+);
+
+router.get(
   '/:id',
   validateRequest(PurchaseOrdersValidation.getSinglePurchaseOrderZodSchema),
   PurchaseOrdersController.getSinglePurchaseOrder
@@ -70,13 +118,6 @@ router.patch(
 router.patch(
   '/:id/cancel',
   PurchaseOrdersController.cancelPurchaseOrder
-);
-
-router.patch(
-  '/:id/receive',
-  auth,
-  requirePermission(PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER),
-  PurchaseOrdersController.receivePurchaseOrder
 );
 
 router.delete(

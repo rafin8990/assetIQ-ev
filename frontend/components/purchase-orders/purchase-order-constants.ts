@@ -23,8 +23,22 @@ export const STATUS_TABS: {
   { label: "All", value: "all" },
   { label: "Pending", value: "pending" },
   { label: "Approved", value: "approved" },
+  { label: "In Staging", value: "in_staging" },
+  { label: "Partial", value: "partially_received" },
+  { label: "Fully Received", value: "fully_received" },
   { label: "Received", value: "received" },
   { label: "Cancelled", value: "cancelled" },
+]
+
+export const STAGING_STATUS_TABS: {
+  label: string
+  value: "all" | "approved" | "in_staging" | "partially_received" | "fully_received"
+}[] = [
+  { label: "All", value: "all" },
+  { label: "Approved", value: "approved" },
+  { label: "In Staging", value: "in_staging" },
+  { label: "Partial", value: "partially_received" },
+  { label: "Fully Received", value: "fully_received" },
 ]
 
 export const ORDER_TYPE_OPTIONS: {
@@ -46,11 +60,34 @@ export function formatDate(value: string) {
 }
 
 export function formatStatus(status: PurchaseOrderStatus) {
-  return status.charAt(0).toUpperCase() + status.slice(1)
+  switch (status) {
+    case "in_staging":
+      return "In Staging"
+    case "partially_received":
+      return "Partially Received"
+    case "fully_received":
+      return "Fully Received"
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1)
+  }
 }
 
 export function formatOrderType(type: PurchaseOrderType) {
   return type === "by_requisition" ? "By Requisition" : "Direct"
+}
+
+export function formatVendorDisplay(po: {
+  vendor_name?: string | null
+  vendor_company_name?: string | null
+  vendor_id?: number | null
+}) {
+  if (po.vendor_name) {
+    return po.vendor_company_name
+      ? `${po.vendor_name} (${po.vendor_company_name})`
+      : po.vendor_name
+  }
+
+  return po.vendor_id ? `Vendor #${po.vendor_id}` : "—"
 }
 
 export function formatCurrency(amount: number | null | undefined) {
@@ -65,6 +102,12 @@ export function getStatusBadgeClass(status: PurchaseOrderStatus) {
   switch (status) {
     case "approved":
       return "bg-[#e8f8f0] text-[#2d9f6f]"
+    case "in_staging":
+      return "bg-purple-50 text-purple-700"
+    case "partially_received":
+      return "bg-amber-50 text-amber-700"
+    case "fully_received":
+      return "bg-teal-50 text-teal-700"
     case "received":
       return "bg-blue-50 text-blue-700"
     case "cancelled":
@@ -94,7 +137,9 @@ export function canReceivePurchaseOrder(
 ) {
   return (
     hasPermission(user, PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER) &&
-    status === "approved"
+    (status === "approved" ||
+      status === "in_staging" ||
+      status === "partially_received")
   )
 }
 

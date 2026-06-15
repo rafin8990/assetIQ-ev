@@ -48,7 +48,45 @@ export const sidebarNavSections: NavSection[] = [
       {
         title: "Inventory",
         icon: Warehouse,
-        children: [{ title: "Stock", href: "/stock" }],
+        children: [
+          { title: "Location Stock", href: "/inventory/location-stock" },
+          { title: "Total Stock", href: "/inventory/total-stock" },
+          { title: "Stock Movements", href: "/inventory/stock-movements" },
+          {
+            title: "Movement Approval",
+            href: "/inventory/stock-movements/approval",
+          },
+          {
+            title: "Destination Confirm",
+            href: "/inventory/stock-movements/confirm",
+          },
+          { title: "Location", href: "/locations" },
+          {
+            title: "Report",
+            children: [
+              {
+                title: "Date-wise Movement History",
+                href: "/inventory/reports/date-wise-movement",
+              },
+              {
+                title: "Date Range Movement History",
+                href: "/inventory/reports/date-range-movement",
+              },
+              {
+                title: "User-wise Movement History",
+                href: "/inventory/reports/user-wise-movement",
+              },
+              {
+                title: "Main Stock Update History",
+                href: "/inventory/reports/main-stock-update",
+              },
+              {
+                title: "Monthly Movement Report",
+                href: "/inventory/reports/monthwise-movement",
+              },
+            ],
+          },
+        ],
       },
       {
         title: "Procurement",
@@ -56,6 +94,7 @@ export const sidebarNavSections: NavSection[] = [
         children: [
           { title: "Requisition", href: "/requisitions" },
           { title: "Purchase Order", href: "/purchase-orders" },
+          { title: "PO Receiving", href: "/procurement/po-receiving" },
           { title: "Vendor", href: "/vendor" },
           {
             title: "Report",

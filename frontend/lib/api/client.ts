@@ -1,4 +1,8 @@
-import { getAccessToken } from "@/lib/auth/token"
+import {
+  getAccessToken,
+  handleSessionExpired,
+  isAccessTokenExpired,
+} from "@/lib/auth/token"
 import type { ApiErrorBody, ApiResponse } from "@/lib/api/types"
 
 export const API_BASE_URL =
@@ -21,10 +25,30 @@ export class ApiError extends Error {
   }
 }
 
+function shouldRedirectOnUnauthorized(endpoint: string) {
+  return endpoint !== "/auth/login"
+}
+
+function redirectIfSessionExpired(endpoint: string) {
+  if (!shouldRedirectOnUnauthorized(endpoint)) return
+
+  handleSessionExpired(window.location.pathname)
+}
+
+function ensureAccessTokenValid(endpoint: string) {
+  const token = getAccessToken()
+  if (!token || !isAccessTokenExpired(token)) return
+
+  redirectIfSessionExpired(endpoint)
+  throw new ApiError(401, "Session expired")
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
+  ensureAccessTokenValid(endpoint)
+
   const token = getAccessToken()
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -39,6 +63,10 @@ export async function apiRequest<T>(
   const body = (await response.json()) as ApiResponse<T> | ApiErrorBody
 
   if (!response.ok || !body.success) {
+    if (response.status === 401) {
+      redirectIfSessionExpired(endpoint)
+    }
+
     const errorBody = body as ApiErrorBody
     throw new ApiError(
       response.status,
@@ -61,6 +89,8 @@ export async function apiFormRequest<T>(
   formData: FormData,
   method: "POST" | "PATCH" = "POST"
 ): Promise<ApiResponse<T>> {
+  ensureAccessTokenValid(endpoint)
+
   const token = getAccessToken()
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -74,6 +104,10 @@ export async function apiFormRequest<T>(
   const body = (await response.json()) as ApiResponse<T> | ApiErrorBody
 
   if (!response.ok || !body.success) {
+    if (response.status === 401) {
+      redirectIfSessionExpired(endpoint)
+    }
+
     const errorBody = body as ApiErrorBody
     throw new ApiError(
       response.status,
@@ -89,6 +123,8 @@ export async function downloadFile(
   endpoint: string,
   filename: string
 ): Promise<void> {
+  ensureAccessTokenValid(endpoint)
+
   const token = getAccessToken()
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -98,6 +134,10 @@ export async function downloadFile(
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      redirectIfSessionExpired(endpoint)
+    }
+
     throw new ApiError(response.status, "Failed to download file")
   }
 

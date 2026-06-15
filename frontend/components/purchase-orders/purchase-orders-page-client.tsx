@@ -29,6 +29,7 @@ import {
   formatDate,
   formatOrderType,
   formatStatus,
+  formatVendorDisplay,
   getStatusBadgeClass,
   selectClassName,
   STATUS_TABS,
@@ -62,20 +63,21 @@ import {
   deletePurchaseOrder,
   getPurchaseOrder,
   getPurchaseOrders,
-  receivePurchaseOrder,
 } from "@/services/purchase-orders"
 import { getUnits } from "@/services/units"
+import { getVendors } from "@/services/vendors"
 import type { Item } from "@/types/items"
 import type {
   PurchaseOrder,
   PurchaseOrderStatus,
 } from "@/types/purchase-orders"
 import type { Unit } from "@/types/units"
+import type { Vendor } from "@/types/vendors"
 
 type StatusCounts = {
   pending: number
   approved: number
-  received: number
+  fullyReceived: number
   cancelled: number
 }
 
@@ -88,10 +90,11 @@ export function PurchaseOrdersPageClient() {
   )
   const [items, setItems] = React.useState<Item[]>([])
   const [units, setUnits] = React.useState<Unit[]>([])
+  const [vendors, setVendors] = React.useState<Vendor[]>([])
   const [statusCounts, setStatusCounts] = React.useState<StatusCounts>({
     pending: 0,
     approved: 0,
-    received: 0,
+    fullyReceived: 0,
     cancelled: 0,
   })
 
@@ -122,45 +125,44 @@ export function PurchaseOrdersPageClient() {
   const [poToApprove, setPoToApprove] = React.useState<PurchaseOrder | null>(
     null
   )
-  const [receiveOpen, setReceiveOpen] = React.useState(false)
-  const [poToReceive, setPoToReceive] = React.useState<PurchaseOrder | null>(
-    null
-  )
   const [cancelOpen, setCancelOpen] = React.useState(false)
   const [poToCancel, setPoToCancel] = React.useState<PurchaseOrder | null>(null)
 
   const fetchLookups = React.useCallback(async () => {
     try {
-      const [itemsRes, unitsRes] = await Promise.all([
+      const [itemsRes, unitsRes, vendorsRes] = await Promise.all([
         getItems({ limit: 200, sortBy: "name", sortOrder: "asc" }),
         getUnits({ limit: 100, sortBy: "name", sortOrder: "asc" }),
+        getVendors({ limit: 200, sortBy: "vendor_name", sortOrder: "asc" }),
       ])
       setItems(itemsRes.data)
       setUnits(unitsRes.data)
+      setVendors(vendorsRes.data)
     } catch {
       setItems([])
       setUnits([])
+      setVendors([])
     }
   }, [])
 
   const fetchStatusCounts = React.useCallback(async () => {
     try {
-      const [pendingRes, approvedRes, receivedRes, cancelledRes] =
+      const [pendingRes, approvedRes, fullyReceivedRes, cancelledRes] =
         await Promise.all([
           getPurchaseOrders({ status: "pending", limit: 1 }),
           getPurchaseOrders({ status: "approved", limit: 1 }),
-          getPurchaseOrders({ status: "received", limit: 1 }),
+          getPurchaseOrders({ status: "fully_received", limit: 1 }),
           getPurchaseOrders({ status: "cancelled", limit: 1 }),
         ])
 
       setStatusCounts({
         pending: pendingRes.meta?.total ?? 0,
         approved: approvedRes.meta?.total ?? 0,
-        received: receivedRes.meta?.total ?? 0,
+        fullyReceived: fullyReceivedRes.meta?.total ?? 0,
         cancelled: cancelledRes.meta?.total ?? 0,
       })
     } catch {
-      setStatusCounts({ pending: 0, approved: 0, received: 0, cancelled: 0 })
+      setStatusCounts({ pending: 0, approved: 0, fullyReceived: 0, cancelled: 0 })
     }
   }, [])
 
@@ -300,29 +302,6 @@ export function PurchaseOrdersPageClient() {
     }
   }
 
-  const handleReceive = async () => {
-    if (!poToReceive || !authUser) return
-    setIsSubmitting(true)
-    setFormError(null)
-
-    try {
-      await receivePurchaseOrder(poToReceive.id, authUser.id)
-      setReceiveOpen(false)
-      setPoToReceive(null)
-      await refreshAll()
-    } catch (err) {
-      setFormError(
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : "Failed to mark purchase order as received"
-      )
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   const handleCancel = async () => {
     if (!poToCancel) return
     setIsSubmitting(true)
@@ -354,7 +333,8 @@ export function PurchaseOrdersPageClient() {
             Purchase Orders
           </h2>
           <p className="text-[#8b95a5]">
-            Create, approve, receive, and manage purchase orders.
+            Create, approve, and manage purchase orders. Record deliveries in PO
+            Receiving.
           </p>
         </div>
         <Button onClick={openCreateModal}>
@@ -367,7 +347,7 @@ export function PurchaseOrdersPageClient() {
         {[
           { label: "Pending", value: statusCounts.pending, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
           { label: "Approved", value: statusCounts.approved, icon: CheckCircle2, color: "text-[#4DC591]", bg: "bg-[#e8f8f0]" },
-          { label: "Received", value: statusCounts.received, icon: PackageCheck, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Fully Received", value: statusCounts.fullyReceived, icon: PackageCheck, color: "text-teal-600", bg: "bg-teal-50" },
           { label: "Cancelled", value: statusCounts.cancelled, icon: XCircle, color: "text-red-500", bg: "bg-red-50" },
         ].map(stat => (
           <div
@@ -472,6 +452,7 @@ export function PurchaseOrdersPageClient() {
               <tr className="border-b border-[#e8eaed] bg-[#f8f9fb]">
                 <th className="px-5 py-3 font-semibold text-[#373B44]">PO #</th>
                 <th className="px-5 py-3 font-semibold text-[#373B44]">Type</th>
+                <th className="px-5 py-3 font-semibold text-[#373B44]">Vendor</th>
                 <th className="px-5 py-3 font-semibold text-[#373B44]">
                   Created By
                 </th>
@@ -488,7 +469,7 @@ export function PurchaseOrdersPageClient() {
             <tbody className="divide-y divide-[#e8eaed]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="px-5 py-10 text-center text-[#8b95a5]">
+                  <td colSpan={10} className="px-5 py-10 text-center text-[#8b95a5]">
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="size-4 animate-spin" />
                       Loading purchase orders...
@@ -497,7 +478,7 @@ export function PurchaseOrdersPageClient() {
                 </tr>
               ) : purchaseOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-5 py-10 text-center text-[#8b95a5]">
+                  <td colSpan={10} className="px-5 py-10 text-center text-[#8b95a5]">
                     No purchase orders found. Create your first order to get
                     started.
                   </td>
@@ -510,6 +491,9 @@ export function PurchaseOrdersPageClient() {
                     </td>
                     <td className="px-5 py-3.5 text-[#5c6370]">
                       {formatOrderType(po.order_type)}
+                    </td>
+                    <td className="px-5 py-3.5 text-[#5c6370]">
+                      {formatVendorDisplay(po)}
                     </td>
                     <td className="px-5 py-3.5 text-[#5c6370]">
                       {po.created_by_name ?? `#${po.created_by}`}
@@ -575,18 +559,13 @@ export function PurchaseOrdersPageClient() {
                         )}
 
                         {canReceivePurchaseOrder(authUser, po.status) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setPoToReceive(po)
-                              setFormError(null)
-                              setReceiveOpen(true)
-                            }}
+                          <Link
+                            href={`/procurement/po-receiving/${po.id}`}
+                            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
                           >
                             <PackageCheck />
                             Receive
-                          </Button>
+                          </Link>
                         )}
 
                         {canCancelPurchaseOrder(po.status) && (
@@ -659,6 +638,7 @@ export function PurchaseOrdersPageClient() {
         purchaseOrder={selectedPo}
         items={items}
         units={units}
+        vendors={vendors}
         onSuccess={refreshAll}
         onCreated={created =>
           router.push(`/purchase-orders/${created.id}?voucher=1`)
@@ -686,31 +666,6 @@ export function PurchaseOrdersPageClient() {
             <Button className="bg-[#4DC591] hover:bg-[#3db37f]" onClick={handleApprove} disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="animate-spin" />}
               Approve
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={receiveOpen} onOpenChange={setReceiveOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Mark as Received</DialogTitle>
-            <DialogDescription>
-              Confirm goods received for {poToReceive?.po_number}?
-            </DialogDescription>
-          </DialogHeader>
-          {formError && (
-            <DialogBody>
-              <p className="text-sm text-red-600">{formError}</p>
-            </DialogBody>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReceiveOpen(false)} disabled={isSubmitting}>
-              Close
-            </Button>
-            <Button onClick={handleReceive} disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="animate-spin" />}
-              Confirm Received
             </Button>
           </DialogFooter>
         </DialogContent>

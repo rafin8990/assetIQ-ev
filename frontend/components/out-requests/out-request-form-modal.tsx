@@ -21,6 +21,7 @@ import { ApiError } from "@/lib/api/client"
 import { getAuthUser } from "@/lib/auth/token"
 import { createOutRequest, updateOutRequest } from "@/services/out-requests"
 import type { Item } from "@/types/items"
+import type { Location } from "@/types/locations"
 import type { OutRequest, OutRequestItemPayload } from "@/types/out-requests"
 import type { Unit } from "@/types/units"
 
@@ -40,6 +41,7 @@ type OutRequestFormModalProps = {
   outRequest?: OutRequest | null
   items: Item[]
   units: Unit[]
+  locations: Location[]
   onSuccess: () => void
   onCreated?: (outRequest: OutRequest) => void
 }
@@ -71,10 +73,12 @@ export function OutRequestFormModal({
   outRequest,
   items,
   units,
+  locations,
   onSuccess,
   onCreated,
 }: OutRequestFormModalProps) {
   const [description, setDescription] = React.useState("")
+  const [sourceLocationId, setSourceLocationId] = React.useState("")
   const [lineItems, setLineItems] = React.useState<LineItemRow[]>([
     createEmptyRow(),
   ])
@@ -86,9 +90,11 @@ export function OutRequestFormModal({
 
     if (mode === "edit" && outRequest) {
       setDescription(outRequest.description ?? "")
+      setSourceLocationId(String(outRequest.source_location_id))
       setLineItems(rowsFromOutRequest(outRequest))
     } else {
       setDescription("")
+      setSourceLocationId("")
       setLineItems([createEmptyRow()])
     }
 
@@ -161,6 +167,11 @@ export function OutRequestFormModal({
       return
     }
 
+    if (mode === "create" && !sourceLocationId) {
+      setFormError("Source location is required")
+      return
+    }
+
     setIsSubmitting(true)
     setFormError(null)
 
@@ -168,6 +179,7 @@ export function OutRequestFormModal({
       if (mode === "create") {
         const created = await createOutRequest({
           description: description.trim() || null,
+          source_location_id: Number(sourceLocationId),
           requested_by: authUser.id,
           items: itemsPayload,
         })
@@ -235,6 +247,27 @@ export function OutRequestFormModal({
                 disabled={isSubmitting}
               />
             </div>
+
+            {mode === "create" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[#373B44]">
+                  Source location <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={sourceLocationId}
+                  onChange={e => setSourceLocationId(e.target.value)}
+                  className={selectClassName}
+                  disabled={isSubmitting}
+                >
+                  <option value="">Select source location</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">

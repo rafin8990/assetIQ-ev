@@ -16,6 +16,7 @@ export type OutRequestItem = {
   item_name?: string | null
   unit_name?: string | null
   available_quantity?: number | null
+  total_available_quantity?: number | null
 }
 
 export type OutRequest = {
@@ -23,11 +24,13 @@ export type OutRequest = {
   request_id: string
   description: string | null
   status: OutRequestStatus
+  source_location_id: number
   requested_by: number
   approved_by: number | null
   out_by: number | null
   created_at: string
   updated_at: string
+  source_location_name?: string | null
   requested_by_name?: string | null
   approved_by_name?: string | null
   out_by_name?: string | null
@@ -42,6 +45,7 @@ export type OutRequestItemPayload = {
 
 export type CreateOutRequestPayload = {
   description?: string | null
+  source_location_id: number
   requested_by: number
   items: OutRequestItemPayload[]
 }

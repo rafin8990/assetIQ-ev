@@ -35,6 +35,10 @@ const processOutItemSchema = z.object({
 
 export const createOutRequestBodySchema = z.object({
   description: z.string().trim().nullable().optional(),
+  source_location_id: z
+    .number({ error: 'Source location is required' })
+    .int({ error: 'Source location must be an integer' })
+    .positive({ error: 'Source location must be positive' }),
   requested_by: z
     .number({ error: 'Requested by is required' })
     .int({ error: 'Requested by must be an integer' })

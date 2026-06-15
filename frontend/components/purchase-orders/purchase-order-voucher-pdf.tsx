@@ -7,6 +7,7 @@ import {
 } from "@react-pdf/renderer"
 
 import { brand } from "@/lib/brand"
+import { formatVendorDisplay } from "@/components/purchase-orders/purchase-order-constants"
 import type { PurchaseOrder } from "@/types/purchase-orders"
 
 const styles = StyleSheet.create({
@@ -232,6 +233,12 @@ export function PurchaseOrderVoucherDocument({
 
         <View style={styles.metaRow}>
           <View style={styles.metaCard}>
+            <Text style={styles.metaLabel}>Vendor</Text>
+            <Text style={styles.metaValue}>
+              {formatVendorDisplay(purchaseOrder)}
+            </Text>
+          </View>
+          <View style={styles.metaCard}>
             <Text style={styles.metaLabel}>Created By</Text>
             <Text style={styles.metaValue}>
               {purchaseOrder.created_by_name ??
@@ -247,6 +254,9 @@ export function PurchaseOrderVoucherDocument({
                   : "Pending")}
             </Text>
           </View>
+        </View>
+
+        <View style={styles.metaRow}>
           <View style={styles.metaCard}>
             <Text style={styles.metaLabel}>Received By</Text>
             <Text style={styles.metaValue}>

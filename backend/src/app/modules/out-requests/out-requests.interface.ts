@@ -7,6 +7,7 @@ export type IOutRequest = {
   request_id: string;
   description: string | null;
   status: OutRequestStatus;
+  source_location_id: number;
   requested_by: number;
   approved_by: number | null;
   out_by: number | null;
@@ -31,9 +32,11 @@ export type IOutRequestItemWithRelations = IOutRequestItem & {
   item_name?: string | null;
   unit_name?: string | null;
   available_quantity?: number | null;
+  total_available_quantity?: number | null;
 };
 
 export type IOutRequestWithRelations = IOutRequest & {
+  source_location_name?: string | null;
   requested_by_name?: string | null;
   approved_by_name?: string | null;
   out_by_name?: string | null;
@@ -48,6 +51,7 @@ export type IOutRequestItemPayload = {
 
 export type ICreateOutRequestPayload = {
   description?: string | null;
+  source_location_id: number;
   requested_by: number;
   items: IOutRequestItemPayload[];
 };

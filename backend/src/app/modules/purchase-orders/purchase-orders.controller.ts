@@ -7,18 +7,24 @@ import catchAsync from '../../../shared/catchAsync';
 import pick from '../../../shared/pick';
 import sendResponse from '../../../shared/sendResponse';
 import { getPurchaseOrderAttachmentPublicPath } from '../../middlewares/uploadPurchaseOrderAttachment';
-import { PURCHASE_ORDERS_FILTERABLE_FIELDS } from './purchase-orders.constant';
+import {
+  PURCHASE_ORDERS_FILTERABLE_FIELDS,
+  STAGING_FILTERABLE_FIELDS,
+} from './purchase-orders.constant';
 import {
   parseCreatePurchaseOrderFormBody,
   parseUpdatePurchaseOrderFormBody,
 } from './purchase-orders.helpers';
 import {
   IPurchaseOrderWithRelations,
+  IStagingPurchaseOrderDetail,
+  IStagingPurchaseOrderSummary,
   PurchaseOrderStatus,
   PurchaseOrderType,
 } from './purchase-orders.interface';
 import { PurchaseOrdersReportsService } from './purchase-orders-reports.service';
 import { PurchaseOrdersService } from './purchase-orders.service';
+import { PurchaseOrdersStagingService } from './purchase-orders.staging.service';
 
 const mapUploadedAttachment = (file?: Express.Multer.File | null) =>
   file ? getPurchaseOrderAttachmentPublicPath(file.filename) : undefined;
@@ -78,6 +84,10 @@ const getAllPurchaseOrders = catchAsync(async (req: Request, res: Response) => {
     createdBy:
       rawFilters.createdBy !== undefined
         ? Number(rawFilters.createdBy)
+        : undefined,
+    vendorId:
+      rawFilters.vendorId !== undefined
+        ? Number(rawFilters.vendorId)
         : undefined,
   };
 
@@ -149,7 +159,7 @@ const deletePurchaseOrder = catchAsync(async (req: Request, res: Response) => {
 });
 
 const approvePurchaseOrder = catchAsync(async (req: Request, res: Response) => {
-  const approvedBy = Number(req.body.approved_by);
+  const approvedBy = req.user?.userId ?? Number(req.body.approved_by);
 
   if (!approvedBy || Number.isNaN(approvedBy)) {
     return res.status(httpStatus.BAD_REQUEST).json({
@@ -183,32 +193,6 @@ const cancelPurchaseOrder = catchAsync(async (req: Request, res: Response) => {
     statusCode: httpStatus.OK,
     success: true,
     message: 'Purchase order cancelled successfully',
-    data: result,
-  });
-});
-
-const receivePurchaseOrder = catchAsync(async (req: Request, res: Response) => {
-  const receivedBy = Number(req.body.received_by);
-
-  if (!receivedBy || Number.isNaN(receivedBy)) {
-    return res.status(httpStatus.BAD_REQUEST).json({
-      success: false,
-      message: 'received_by is required',
-      errorMessages: [
-        { path: 'received_by', message: 'received_by must be a valid user id' },
-      ],
-    });
-  }
-
-  const result = await PurchaseOrdersService.receivePurchaseOrder(
-    Number(req.params.id),
-    receivedBy
-  );
-
-  sendResponse<IPurchaseOrderWithRelations>(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Purchase order marked as received successfully',
     data: result,
   });
 });
@@ -271,6 +255,134 @@ const getMonthwiseReport = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getStagingPurchaseOrders = catchAsync(
+  async (req: Request, res: Response) => {
+    const rawFilters = pick(req.query, STAGING_FILTERABLE_FIELDS);
+    const options = pick(req.query, paginationFields);
+    const filters = {
+      searchTerm:
+        typeof rawFilters.searchTerm === 'string'
+          ? rawFilters.searchTerm
+          : undefined,
+      status:
+        typeof rawFilters.status === 'string'
+          ? (rawFilters.status as PurchaseOrderStatus)
+          : undefined,
+    };
+
+    const result = await PurchaseOrdersStagingService.listStagingPurchaseOrders(
+      filters,
+      options
+    );
+
+    sendResponse<IStagingPurchaseOrderSummary[]>(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Staging purchase orders retrieved successfully',
+      meta: result.meta,
+      data: result.data,
+    });
+  }
+);
+
+const getStagingDetail = catchAsync(async (req: Request, res: Response) => {
+  const result = await PurchaseOrdersStagingService.getStagingDetail(
+    Number(req.params.id)
+  );
+
+  sendResponse<IStagingPurchaseOrderDetail>(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Staging purchase order detail retrieved successfully',
+    data: result,
+  });
+});
+
+const recordStagingReceipt = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(httpStatus.UNAUTHORIZED).json({
+      success: false,
+      message: 'Authentication required',
+    });
+  }
+
+  const result = await PurchaseOrdersStagingService.recordStagingReceipt(
+    Number(req.params.id),
+    userId,
+    req.body.items
+  );
+
+  sendResponse<IStagingPurchaseOrderDetail>(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Staging receipt recorded successfully',
+    data: result,
+  });
+});
+
+const returnToVendor = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(httpStatus.UNAUTHORIZED).json({
+      success: false,
+      message: 'Authentication required',
+    });
+  }
+
+  const result = await PurchaseOrdersStagingService.returnToVendor(
+    Number(req.params.id),
+    userId,
+    req.body.items
+  );
+
+  sendResponse<IStagingPurchaseOrderDetail>(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Items returned to vendor successfully',
+    data: result,
+  });
+});
+
+const acceptStagingToStock = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(httpStatus.UNAUTHORIZED).json({
+      success: false,
+      message: 'Authentication required',
+    });
+  }
+
+  const result = await PurchaseOrdersStagingService.acceptStagingToStock(
+    Number(req.params.id),
+    userId,
+    req.body
+  );
+
+  sendResponse<IStagingPurchaseOrderDetail>(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Items accepted to stock successfully',
+    data: result,
+  });
+});
+
+const getVendorReturns = catchAsync(async (req: Request, res: Response) => {
+  const result = await PurchaseOrdersStagingService.getVendorReturns(
+    Number(req.params.id)
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Vendor returns retrieved successfully',
+    data: result,
+  });
+});
+
 export const PurchaseOrdersController = {
   createPurchaseOrder,
   getAllPurchaseOrders,
@@ -278,10 +390,15 @@ export const PurchaseOrdersController = {
   getDateRangeReport,
   getDuePaidReport,
   getMonthwiseReport,
+  getStagingPurchaseOrders,
+  getStagingDetail,
+  recordStagingReceipt,
+  returnToVendor,
+  acceptStagingToStock,
+  getVendorReturns,
   getSinglePurchaseOrder,
   updatePurchaseOrder,
   deletePurchaseOrder,
   approvePurchaseOrder,
   cancelPurchaseOrder,
-  receivePurchaseOrder,
 };

@@ -5,8 +5,9 @@ import { generateOutRequestId } from '../../../helpers/outRequestIdHelper';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import pool from '../../../utils/dbClient';
+import { InventoryService } from '../inventory/inventory.service';
 import { ItemsService } from '../items/items.service';
-import { StocksService } from '../stocks/stocks.service';
+import { LocationsService } from '../locations/locations.service';
 import { UnitsService } from '../units/units.service';
 import { PERMISSION_ACTION_DELETE_ANY_OUT_REQUEST } from '../permissions/permissions.constant';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -30,8 +31,9 @@ import {
 
 const OUT_REQUEST_SELECT_FIELDS = `
   orq.id, orq.request_id, orq.description, orq.status,
-  orq.requested_by, orq.approved_by, orq.out_by,
+  orq.source_location_id, orq.requested_by, orq.approved_by, orq.out_by,
   orq.created_at, orq.updated_at,
+  loc.name AS source_location_name,
   requester.name AS requested_by_name,
   approver.name AS approved_by_name,
   out_user.name AS out_by_name
@@ -39,13 +41,15 @@ const OUT_REQUEST_SELECT_FIELDS = `
 
 const OUT_REQUEST_JOINS = `
   FROM out_requests orq
+  LEFT JOIN locations loc ON loc.id = orq.source_location_id
   LEFT JOIN users requester ON requester.id = orq.requested_by
   LEFT JOIN users approver ON approver.id = orq.approved_by
   LEFT JOIN users out_user ON out_user.id = orq.out_by
 `;
 
 const getOutRequestItems = async (
-  outRequestId: number
+  outRequestId: number,
+  sourceLocationId?: number | null
 ): Promise<IOutRequestItemWithRelations[]> => {
   const result = await pool.query<IOutRequestItemWithRelations>(
     `SELECT
@@ -53,29 +57,40 @@ const getOutRequestItems = async (
       ori.out_quantity, ori.unit_id, ori.status, ori.out_by,
       ori.created_at, ori.updated_at,
       i.name AS item_name,
-      u.name AS unit_name,
-      COALESCE(s.quantity, 0) AS available_quantity
+      u.name AS unit_name
      FROM out_request_items ori
      LEFT JOIN items i ON i.id = ori.item_id
      LEFT JOIN units u ON u.id = ori.unit_id
-     LEFT JOIN stocks s ON s.item_id = ori.item_id
      WHERE ori.out_request_id = $1
      ORDER BY ori.id ASC`,
     [outRequestId]
   );
 
-  return result.rows.map(row => ({
-    ...row,
-    requested_quantity: Number(row.requested_quantity),
-    out_quantity:
-      row.out_quantity !== null && row.out_quantity !== undefined
-        ? Number(row.out_quantity)
-        : null,
-    available_quantity:
-      row.available_quantity !== null && row.available_quantity !== undefined
-        ? Number(row.available_quantity)
-        : 0,
-  }));
+  return Promise.all(
+    result.rows.map(async row => {
+      const locationQty =
+        sourceLocationId != null
+          ? await InventoryService.getAvailableQuantity(
+              sourceLocationId,
+              row.item_id
+            )
+          : 0;
+      const totalQty = await InventoryService.getTotalAvailableQuantity(
+        row.item_id
+      );
+
+      return {
+        ...row,
+        requested_quantity: Number(row.requested_quantity),
+        out_quantity:
+          row.out_quantity !== null && row.out_quantity !== undefined
+            ? Number(row.out_quantity)
+            : null,
+        available_quantity: locationQty,
+        total_available_quantity: totalQty,
+      };
+    })
+  );
 };
 
 const validateOutRequestItems = async (items: IOutRequestItemPayload[]) => {
@@ -182,6 +197,7 @@ const createOutRequest = async (
   payload: ICreateOutRequestPayload
 ): Promise<IOutRequestWithRelations> => {
   await UsersService.getSingleUser(payload.requested_by);
+  await LocationsService.getSingleLocation(payload.source_location_id);
   await validateOutRequestItems(payload.items);
 
   const client = await pool.connect();
@@ -193,10 +209,15 @@ const createOutRequest = async (
 
     const result = await client.query<IOutRequest>(
       `INSERT INTO out_requests (
-        request_id, description, status, requested_by
-      ) VALUES ($1, $2, 'pending', $3)
+        request_id, description, status, source_location_id, requested_by
+      ) VALUES ($1, $2, 'pending', $3, $4)
       RETURNING *`,
-      [requestId, payload.description ?? null, payload.requested_by]
+      [
+        requestId,
+        payload.description ?? null,
+        payload.source_location_id,
+        payload.requested_by,
+      ]
     );
 
     const outRequest = result.rows[0];
@@ -272,7 +293,7 @@ const getAllOutRequests = async (
 
   const data = await Promise.all(
     dataResult.rows.map(async row => {
-      const items = await getOutRequestItems(row.id);
+      const items = await getOutRequestItems(row.id, row.source_location_id);
       return { ...row, items };
     })
   );
@@ -302,7 +323,7 @@ const getSingleOutRequest = async (
     throw new ApiError(httpStatus.NOT_FOUND, 'Out request not found');
   }
 
-  const items = await getOutRequestItems(id);
+  const items = await getOutRequestItems(id, result.rows[0].source_location_id);
   return { ...result.rows[0], items };
 };
 
@@ -540,8 +561,10 @@ const processOutRequest = async (
   try {
     await client.query('BEGIN');
 
-    await StocksService.decreaseStockFromOutRequestItems(
+    await InventoryService.decreaseFromOutRequestItems(
       client,
+      existing.source_location_id,
+      id,
       operations.map(operation => ({
         item_id: operation.item.item_id,
         quantity: operation.quantityThisOperation,

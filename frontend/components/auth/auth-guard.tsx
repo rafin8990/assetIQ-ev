@@ -1,10 +1,16 @@
 "use client"
 
 import * as React from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
-import { getAccessToken, getAuthUser, syncAuthCookie } from "@/lib/auth/token"
+import {
+  getAccessToken,
+  getAuthUser,
+  handleSessionExpired,
+  isAccessTokenExpired,
+  syncAuthCookie,
+} from "@/lib/auth/token"
 import { getProfile } from "@/services/auth"
 
 type AuthGuardProps = {
@@ -12,16 +18,14 @@ type AuthGuardProps = {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const router = useRouter()
   const pathname = usePathname()
   const [isReady, setIsReady] = React.useState(false)
 
   React.useEffect(() => {
     const token = getAccessToken()
 
-    if (!token) {
-      const redirect = pathname ? `?redirect=${encodeURIComponent(pathname)}` : ""
-      router.replace(`/login${redirect}`)
+    if (!token || isAccessTokenExpired(token)) {
+      handleSessionExpired(pathname)
       return
     }
 
@@ -38,7 +42,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     }
 
     setIsReady(true)
-  }, [pathname, router])
+  }, [pathname])
 
   if (!isReady) {
     return (

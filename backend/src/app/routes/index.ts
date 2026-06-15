@@ -4,6 +4,9 @@ import AuthRoutes from '../modules/auth/auth.routes';
 import BrandsRoutes from '../modules/brands/brands.routes';
 import CategoriesRoutes from '../modules/categories/categories.routes';
 import ItemsRoutes from '../modules/items/items.routes';
+import InventoryRoutes from '../modules/inventory/inventory.routes';
+import LocationsRoutes from '../modules/locations/locations.routes';
+import StockMovementsRoutes from '../modules/stock-movements/stock-movements.routes';
 import OutRequestsRoutes from '../modules/out-requests/out-requests.routes';
 import PermissionsRoutes from '../modules/permissions/permissions.routes';
 import ReturnRequestsRoutes from '../modules/return-requests/return-requests.routes';
@@ -50,6 +53,18 @@ const moduleRoutes: ModuleRoute[] = [
   {
     path: '/items',
     routes: ItemsRoutes,
+  },
+  {
+    path: '/locations',
+    routes: LocationsRoutes,
+  },
+  {
+    path: '/inventory',
+    routes: InventoryRoutes,
+  },
+  {
+    path: '/stock-movements',
+    routes: StockMovementsRoutes,
   },
   {
     path: '/units',

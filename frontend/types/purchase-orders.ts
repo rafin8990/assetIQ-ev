@@ -3,6 +3,9 @@ export type PurchaseOrderStatus =
   | "approved"
   | "cancelled"
   | "received"
+  | "in_staging"
+  | "partially_received"
+  | "fully_received"
 
 export type PurchaseOrderType = "by_requisition" | "direct"
 
@@ -11,6 +14,8 @@ export type PoItem = {
   po_id: number
   item_id: number
   quantity: number
+  received_quantity?: number
+  returned_quantity?: number
   unit_id: number | null
   per_unit_amount: number | null
   total_amount: number | null
@@ -32,6 +37,7 @@ export type PurchaseOrder = {
   id: number
   po_number: string
   created_by: number
+  vendor_id: number | null
   description: string | null
   status: PurchaseOrderStatus
   total_amount: number | null
@@ -41,12 +47,17 @@ export type PurchaseOrder = {
   attachment: string | null
   approved_by: number | null
   received_by: number | null
+  staged_by?: number | null
+  staged_at?: string | null
   order_type: PurchaseOrderType
   created_at: string
   updated_at: string
   created_by_name?: string | null
+  vendor_name?: string | null
+  vendor_company_name?: string | null
   approved_by_name?: string | null
   received_by_name?: string | null
+  staged_by_name?: string | null
   items: PoItem[]
   requisitions?: PurchaseOrderRequisition[]
 }
@@ -61,6 +72,7 @@ export type PoItemPayload = {
 
 export type CreatePurchaseOrderPayload = {
   created_by: number
+  vendor_id?: number | null
   description?: string | null
   status?: PurchaseOrderStatus
   paid_amount?: number | null
@@ -72,6 +84,7 @@ export type CreatePurchaseOrderPayload = {
 
 export type UpdatePurchaseOrderPayload = {
   created_by?: number
+  vendor_id?: number | null
   description?: string | null
   status?: PurchaseOrderStatus
   paid_amount?: number | null
@@ -89,4 +102,5 @@ export type PurchaseOrdersListParams = {
   status?: PurchaseOrderStatus
   orderType?: PurchaseOrderType
   createdBy?: number
+  vendorId?: number
 }

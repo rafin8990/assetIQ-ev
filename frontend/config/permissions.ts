@@ -68,11 +68,95 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     href: "/purchase-orders",
   },
   {
+    key: "route.procurement.po_receiving",
+    name: "PO Receiving",
+    type: "route",
+    group: "Procurement",
+    href: "/procurement/po-receiving",
+  },
+  {
     key: "route.procurement.stock",
     name: "Stock",
     type: "route",
     group: "Inventory",
     href: "/stock",
+  },
+  {
+    key: "route.inventory.location_stock",
+    name: "Location Stock",
+    type: "route",
+    group: "Inventory",
+    href: "/inventory/location-stock",
+  },
+  {
+    key: "route.inventory.total_stock",
+    name: "Total Stock",
+    type: "route",
+    group: "Inventory",
+    href: "/inventory/total-stock",
+  },
+  {
+    key: "route.inventory.stock_movements",
+    name: "Stock Movements",
+    type: "route",
+    group: "Inventory",
+    href: "/inventory/stock-movements",
+  },
+  {
+    key: "route.inventory.stock_movement_approval",
+    name: "Movement Approval",
+    type: "route",
+    group: "Inventory",
+    href: "/inventory/stock-movements/approval",
+  },
+  {
+    key: "route.inventory.stock_movement_confirm",
+    name: "Destination Confirm",
+    type: "route",
+    group: "Inventory",
+    href: "/inventory/stock-movements/confirm",
+  },
+  {
+    key: "route.inventory.locations",
+    name: "Location",
+    type: "route",
+    group: "Inventory",
+    href: "/locations",
+  },
+  {
+    key: "route.inventory.reports.date_wise_movement",
+    name: "Date-wise Movement History",
+    type: "route",
+    group: "Inventory",
+    href: "/inventory/reports/date-wise-movement",
+  },
+  {
+    key: "route.inventory.reports.date_range_movement",
+    name: "Date Range Movement History",
+    type: "route",
+    group: "Inventory",
+    href: "/inventory/reports/date-range-movement",
+  },
+  {
+    key: "route.inventory.reports.user_wise_movement",
+    name: "User-wise Movement History",
+    type: "route",
+    group: "Inventory",
+    href: "/inventory/reports/user-wise-movement",
+  },
+  {
+    key: "route.inventory.reports.main_stock_update",
+    name: "Main Stock Update History",
+    type: "route",
+    group: "Inventory",
+    href: "/inventory/reports/main-stock-update",
+  },
+  {
+    key: "route.inventory.reports.monthwise_movement",
+    name: "Monthly Movement Report",
+    type: "route",
+    group: "Inventory",
+    href: "/inventory/reports/monthwise-movement",
   },
   {
     key: "route.procurement.vendor",
@@ -139,7 +223,39 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     type: "action",
     group: "Inventory",
     module: "stocks",
-    relatedRouteKey: "route.procurement.stock",
+    relatedRouteKey: "route.inventory.total_stock",
+  },
+  {
+    key: "action.stock_movements.approve",
+    name: "Approve Stock Movement",
+    type: "action",
+    group: "Inventory",
+    module: "stock_movements",
+    relatedRouteKey: "route.inventory.stock_movement_approval",
+  },
+  {
+    key: "action.stock_movements.ready",
+    name: "Mark Stock Movement Ready",
+    type: "action",
+    group: "Inventory",
+    module: "stock_movements",
+    relatedRouteKey: "route.inventory.stock_movements",
+  },
+  {
+    key: "action.stock_movements.transfer",
+    name: "Transfer Stock Movement",
+    type: "action",
+    group: "Inventory",
+    module: "stock_movements",
+    relatedRouteKey: "route.inventory.stock_movements",
+  },
+  {
+    key: "action.stock_movements.confirm",
+    name: "Confirm Stock Movement",
+    type: "action",
+    group: "Inventory",
+    module: "stock_movements",
+    relatedRouteKey: "route.inventory.stock_movement_confirm",
   },
   {
     key: "route.outbound.out_request",
@@ -291,6 +407,14 @@ export const PERMISSION_ACTION_APPROVE_PURCHASE_ORDER =
 export const PERMISSION_ACTION_RECEIVE_PURCHASE_ORDER =
   "action.purchase_orders.receive"
 export const PERMISSION_ACTION_MANAGE_STOCK = "action.stocks.manage"
+export const PERMISSION_ACTION_STOCK_MOVEMENTS_APPROVE =
+  "action.stock_movements.approve"
+export const PERMISSION_ACTION_STOCK_MOVEMENTS_READY =
+  "action.stock_movements.ready"
+export const PERMISSION_ACTION_STOCK_MOVEMENTS_TRANSFER =
+  "action.stock_movements.transfer"
+export const PERMISSION_ACTION_STOCK_MOVEMENTS_CONFIRM =
+  "action.stock_movements.confirm"
 export const PERMISSION_ACTION_APPROVE_OUT_REQUEST =
   "action.out_requests.approve"
 export const PERMISSION_ACTION_PROCESS_OUT = "action.out_requests.process_out"

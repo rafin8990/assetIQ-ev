@@ -67,6 +67,45 @@ export function clearAuthSession() {
   clearAuthCookie()
 }
 
+function decodeJwtPayload(token: string): { exp?: number } | null {
+  try {
+    const parts = token.split(".")
+    if (parts.length !== 3) return null
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+    )
+    return payload
+  } catch {
+    return null
+  }
+}
+
+export function isAccessTokenExpired(token?: string | null) {
+  const accessToken = token ?? getAccessToken()
+  if (!accessToken) return true
+
+  const payload = decodeJwtPayload(accessToken)
+  if (!payload?.exp) return false
+
+  return payload.exp <= Math.floor(Date.now() / 1000)
+}
+
+let isRedirectingToLogin = false
+
+export function handleSessionExpired(redirectPath?: string) {
+  if (typeof window === "undefined" || isRedirectingToLogin) return
+
+  isRedirectingToLogin = true
+  clearAuthSession()
+
+  const redirect =
+    redirectPath && redirectPath !== "/login"
+      ? `?redirect=${encodeURIComponent(redirectPath)}`
+      : ""
+
+  window.location.href = `/login${redirect}`
+}
+
 export function getUserInitials(name: string) {
   return name
     .split(" ")

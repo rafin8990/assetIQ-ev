@@ -51,6 +51,7 @@ import {
 import { ApiError } from "@/lib/api/client"
 import { getAuthUser } from "@/lib/auth/token"
 import { getItems } from "@/services/items"
+import { getLocations } from "@/services/locations"
 import {
   approveOutRequest,
   deleteOutRequest,
@@ -59,6 +60,7 @@ import {
 } from "@/services/out-requests"
 import { getUnits } from "@/services/units"
 import type { Item } from "@/types/items"
+import type { Location } from "@/types/locations"
 import type { OutRequest, OutRequestItem } from "@/types/out-requests"
 import type { Unit } from "@/types/units"
 
@@ -100,6 +102,7 @@ export function OutRequestDetailClient({
 
   const [outRequest, setOutRequest] = React.useState<OutRequest | null>(null)
   const [items, setItems] = React.useState<Item[]>([])
+  const [locations, setLocations] = React.useState<Location[]>([])
   const [units, setUnits] = React.useState<Unit[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -136,10 +139,12 @@ export function OutRequestDetailClient({
     setError(null)
 
     try {
-      const [outRequestData, itemsRes, unitsRes] = await Promise.all([
+      const [outRequestData, itemsRes, unitsRes, locationsRes] =
+        await Promise.all([
         getOutRequest(outRequestId),
         getItems({ limit: 200, sortBy: "name", sortOrder: "asc" }),
         getUnits({ limit: 100, sortBy: "name", sortOrder: "asc" }),
+        getLocations({ limit: 200, sortBy: "name", sortOrder: "asc" }),
       ])
 
       setOutRequest(outRequestData)
@@ -147,6 +152,7 @@ export function OutRequestDetailClient({
       setOutError(null)
       setItems(itemsRes.data)
       setUnits(unitsRes.data)
+      setLocations(locationsRes.data)
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -508,7 +514,10 @@ export function OutRequestDetailClient({
                 </th>
                 <th className="px-5 py-3 font-medium text-[#8b95a5]">Unit</th>
                 <th className="px-5 py-3 font-medium text-[#8b95a5]">
-                  Available Stock
+                  Location Stock
+                </th>
+                <th className="px-5 py-3 font-semibold text-[#373B44]">
+                  Total Stock
                 </th>
                 <th className="px-5 py-3 font-medium text-[#8b95a5]">
                   Remaining
@@ -578,6 +587,9 @@ export function OutRequestDetailClient({
                       )}
                     >
                       {item.available_quantity ?? 0}
+                    </td>
+                    <td className="px-5 py-4 text-[#5c6370]">
+                      {item.total_available_quantity ?? 0}
                     </td>
                     <td className="px-5 py-4 text-[#5c6370]">{remaining}</td>
                     <td className="px-5 py-4">
@@ -658,6 +670,7 @@ export function OutRequestDetailClient({
         outRequest={outRequest}
         items={items}
         units={units}
+        locations={locations}
         onSuccess={fetchData}
       />
 
