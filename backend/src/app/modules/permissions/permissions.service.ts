@@ -6,12 +6,14 @@ import pool from '../../../utils/dbClient';
 import { UsersService } from '../users/users.service';
 import {
   ACTION_PERMISSIONS,
+  MODULE_GROUP_ORDER,
   PERMISSION_DEFINITIONS,
   ROUTE_PERMISSIONS,
   VALID_PERMISSION_KEY_SET,
 } from './permissions.constant';
 import {
   IPermissionGroup,
+  IPermissionRouteSection,
   IPermissionsRegistry,
   IUserPermissionsPayload,
 } from './permissions.interface';
@@ -75,13 +77,43 @@ const hasAnyPermission = async (
   return result.rows[0]?.exists ?? false;
 };
 
+const ROUTE_SECTION_PAGES = 'Pages';
+const ROUTE_SECTION_REPORTS = 'Reports';
+
+const getRouteSection = (permissionKey: string) =>
+  permissionKey.includes('.reports.')
+    ? ROUTE_SECTION_REPORTS
+    : ROUTE_SECTION_PAGES;
+
+const buildRouteSections = (
+  routes: typeof ROUTE_PERMISSIONS
+): IPermissionRouteSection[] =>
+  [ROUTE_SECTION_PAGES, ROUTE_SECTION_REPORTS]
+    .map(section => ({
+      section,
+      routes: routes
+        .filter(route => getRouteSection(route.key) === section)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .filter(section => section.routes.length > 0);
+
 const getPermissionsRegistry = (): IPermissionsRegistry => {
   const groupNames = [...new Set(PERMISSION_DEFINITIONS.map(p => p.group))];
+  const orderedGroups = [
+    ...MODULE_GROUP_ORDER.filter(group => groupNames.includes(group)),
+    ...groupNames.filter(
+      group => !MODULE_GROUP_ORDER.includes(group as (typeof MODULE_GROUP_ORDER)[number])
+    ),
+  ];
 
-  const groups: IPermissionGroup[] = groupNames.map(group => ({
+  const groups: IPermissionGroup[] = orderedGroups.map(group => ({
     group,
-    routes: ROUTE_PERMISSIONS.filter(p => p.group === group),
-    actions: ACTION_PERMISSIONS.filter(p => p.group === group),
+    routeSections: buildRouteSections(
+      ROUTE_PERMISSIONS.filter(permission => permission.group === group)
+    ),
+    actions: ACTION_PERMISSIONS.filter(permission => permission.group === group).sort(
+      (a, b) => a.name.localeCompare(b.name)
+    ),
   }));
 
   return {

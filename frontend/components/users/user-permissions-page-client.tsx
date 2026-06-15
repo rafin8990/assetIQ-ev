@@ -1,12 +1,22 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, Save, Shield } from "lucide-react"
+import { Loader2, Save, Search, Shield } from "lucide-react"
 
-import { selectClassName } from "@/components/users/user-constants"
+import {
+  getPermissionGroupKeys,
+  getPermissionSectionKeys,
+  PermissionGroupCard,
+} from "@/components/users/permission-group-card"
+import {
+  formatRole,
+  selectClassName,
+} from "@/components/users/user-constants"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { PERMISSION_ACTION_MANAGE_PERMISSIONS } from "@/config/permissions"
 import { ApiError } from "@/lib/api/client"
-import { getPermissionGroupsFromRegistry, hasPermission } from "@/lib/auth/permissions"
+import { hasPermission } from "@/lib/auth/permissions"
 import { getAuthUser } from "@/lib/auth/token"
 import {
   getPermissionsRegistry,
@@ -14,10 +24,8 @@ import {
   setUserPermissions,
 } from "@/services/permissions"
 import { getUsers } from "@/services/users"
-import { PERMISSION_ACTION_MANAGE_PERMISSIONS } from "@/config/permissions"
-import type { PermissionGroup } from "@/types/permissions"
+import type { PermissionGroup, PermissionRouteSection } from "@/types/permissions"
 import type { User } from "@/types/users"
-import { formatRole } from "@/components/users/user-constants"
 
 export function UserPermissionsPageClient() {
   const authUser = getAuthUser()
@@ -25,8 +33,10 @@ export function UserPermissionsPageClient() {
 
   const [users, setUsers] = React.useState<User[]>([])
   const [groups, setGroups] = React.useState<PermissionGroup[]>([])
+  const [allKeys, setAllKeys] = React.useState<string[]>([])
   const [selectedUserId, setSelectedUserId] = React.useState<string>("")
   const [selectedKeys, setSelectedKeys] = React.useState<Set<string>>(new Set())
+  const [searchTerm, setSearchTerm] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(true)
   const [isLoadingPermissions, setIsLoadingPermissions] = React.useState(false)
   const [isSaving, setIsSaving] = React.useState(false)
@@ -51,9 +61,10 @@ export function UserPermissionsPageClient() {
 
         setUsers(usersResult.data)
         setGroups(registry.groups)
+        setAllKeys(registry.allKeys)
 
         const firstNonSuperAdmin = usersResult.data.find(
-          u => u.role !== "super_admin"
+          user => user.role !== "super_admin"
         )
         if (firstNonSuperAdmin) {
           setSelectedUserId(String(firstNonSuperAdmin.id))
@@ -64,8 +75,10 @@ export function UserPermissionsPageClient() {
             ? err.errorMessages?.[0]?.message || err.message
             : err instanceof Error
               ? err.message
-              : "Failed to load data"
+              : "Failed to load permissions registry"
         setError(message)
+        setGroups([])
+        setAllKeys([])
       } finally {
         setIsLoading(false)
       }
@@ -101,7 +114,51 @@ export function UserPermissionsPageClient() {
     void loadUserPermissions()
   }, [selectedUserId, canManage])
 
-  const selectedUser = users.find(u => String(u.id) === selectedUserId)
+  const selectedUser = users.find(user => String(user.id) === selectedUserId)
+
+  const routeNameByKey = React.useMemo(() => {
+    const map = new Map<string, string>()
+
+    for (const group of groups) {
+      for (const section of group.routeSections) {
+        for (const route of section.routes) {
+          map.set(route.key, route.name)
+        }
+      }
+    }
+
+    return map
+  }, [groups])
+
+  const staleKeys = React.useMemo(
+    () =>
+      [...selectedKeys].filter(
+        key => allKeys.length > 0 && !allKeys.includes(key)
+      ),
+    [allKeys, selectedKeys]
+  )
+
+  const visibleGroupCount = React.useMemo(() => {
+    const query = searchTerm.trim().toLowerCase()
+    if (!query) return groups.length
+
+    return groups.filter(group => {
+      const hasRouteMatch = group.routeSections.some(section =>
+        section.routes.some(
+          route =>
+            route.name.toLowerCase().includes(query) ||
+            route.key.toLowerCase().includes(query) ||
+            (route.href?.toLowerCase().includes(query) ?? false)
+        )
+      )
+      const hasActionMatch = group.actions.some(
+        action =>
+          action.name.toLowerCase().includes(query) ||
+          action.key.toLowerCase().includes(query)
+      )
+      return hasRouteMatch || hasActionMatch
+    }).length
+  }, [groups, searchTerm])
 
   const toggleKey = (key: string, checked: boolean) => {
     setSelectedKeys(prev => {
@@ -115,12 +172,7 @@ export function UserPermissionsPageClient() {
     })
   }
 
-  const toggleGroup = (group: PermissionGroup, checked: boolean) => {
-    const keys = [
-      ...group.routes.map(r => r.key),
-      ...group.actions.map(a => a.key),
-    ]
-
+  const toggleKeys = (keys: string[], checked: boolean) => {
     setSelectedKeys(prev => {
       const next = new Set(prev)
       for (const key of keys) {
@@ -134,12 +186,12 @@ export function UserPermissionsPageClient() {
     })
   }
 
-  const isGroupFullySelected = (group: PermissionGroup) => {
-    const keys = [
-      ...group.routes.map(r => r.key),
-      ...group.actions.map(a => a.key),
-    ]
-    return keys.length > 0 && keys.every(key => selectedKeys.has(key))
+  const toggleGroup = (group: PermissionGroup, checked: boolean) => {
+    toggleKeys(getPermissionGroupKeys(group), checked)
+  }
+
+  const toggleSection = (section: PermissionRouteSection, checked: boolean) => {
+    toggleKeys(getPermissionSectionKeys(section), checked)
   }
 
   const handleSave = async () => {
@@ -150,9 +202,12 @@ export function UserPermissionsPageClient() {
     setSuccess(null)
 
     try {
+      const validKeys = [...selectedKeys].filter(key => allKeys.includes(key))
+
       await setUserPermissions(Number(selectedUserId), {
-        permissionKeys: [...selectedKeys],
+        permissionKeys: validKeys,
       })
+      setSelectedKeys(new Set(validKeys))
       setSuccess("Permissions saved successfully")
     } catch (err) {
       const message =
@@ -200,7 +255,7 @@ export function UserPermissionsPageClient() {
         </div>
         <Button
           onClick={handleSave}
-          disabled={!selectedUserId || isSaving || isLoadingPermissions}
+          disabled={!selectedUserId || isSaving || isLoadingPermissions || !groups.length}
           className="bg-[#4DC591] hover:bg-[#3db37f]"
         >
           {isSaving ? (
@@ -231,7 +286,7 @@ export function UserPermissionsPageClient() {
         <select
           className={selectClassName}
           value={selectedUserId}
-          onChange={e => setSelectedUserId(e.target.value)}
+          onChange={event => setSelectedUserId(event.target.value)}
         >
           <option value="">Choose a user</option>
           {users
@@ -252,115 +307,62 @@ export function UserPermissionsPageClient() {
         )}
       </div>
 
+      {staleKeys.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p className="font-medium">Legacy permissions detected</p>
+          <p className="mt-1 text-xs text-amber-700">
+            These keys are assigned to the user but no longer exist in the
+            current permission registry. They will be removed when you save.
+          </p>
+          <ul className="mt-2 list-disc pl-5 text-xs">
+            {staleKeys.map(key => (
+              <li key={key}>{key}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="rounded-lg border border-[#e8eaed] bg-white p-4">
+        <label className="mb-2 block text-sm font-medium text-[#373B44]">
+          Search permissions
+        </label>
+        <div className="relative max-w-md">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#8b95a5]" />
+          <Input
+            value={searchTerm}
+            onChange={event => setSearchTerm(event.target.value)}
+            placeholder="Search by name, key, or route"
+            className="pl-9"
+          />
+        </div>
+      </div>
+
       {isLoadingPermissions ? (
         <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-[#e8eaed] bg-white">
           <Loader2 className="size-6 animate-spin text-[#4DC591]" />
         </div>
+      ) : groups.length === 0 ? (
+        <div className="rounded-lg border border-[#e8eaed] bg-white px-6 py-12 text-center text-sm text-[#8b95a5]">
+          Permission registry could not be loaded.
+        </div>
+      ) : visibleGroupCount === 0 ? (
+        <div className="rounded-lg border border-[#e8eaed] bg-white px-6 py-12 text-center text-sm text-[#8b95a5]">
+          No permissions match your search.
+        </div>
       ) : (
         <div className="space-y-4">
-          {(groups.length ? groups : getPermissionGroupsFromRegistry()).map(
-            group => {
-              const groupKeys = [
-                ...group.routes.map(r => r.key),
-                ...group.actions.map(a => a.key),
-              ]
-              const selectedInGroup = groupKeys.filter(key =>
-                selectedKeys.has(key)
-              ).length
-
-              return (
-                <div
-                  key={group.group}
-                  className="rounded-lg border border-[#e8eaed] bg-white"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e8eaed] px-5 py-4">
-                    <div>
-                      <h3 className="font-semibold text-[#373B44]">
-                        {group.group}
-                      </h3>
-                      <p className="text-xs text-[#8b95a5]">
-                        {selectedInGroup} of {groupKeys.length} selected
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleGroup(group, true)}
-                      >
-                        Select all
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleGroup(group, false)}
-                      >
-                        Clear
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 p-5">
-                    {group.routes.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#8b95a5]">
-                          Routes
-                        </p>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {group.routes.map(route => (
-                            <label
-                              key={route.key}
-                              className="flex cursor-pointer items-center gap-2 rounded-md border border-[#e8eaed] px-3 py-2 text-sm hover:bg-[#f8f9fa]"
-                            >
-                              <input
-                                type="checkbox"
-                                className="size-4 rounded border-[#d0d5dd] accent-[#4DC591]"
-                                checked={selectedKeys.has(route.key)}
-                                onChange={e =>
-                                  toggleKey(route.key, e.target.checked)
-                                }
-                              />
-                              <span className="text-[#373B44]">{route.name}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {group.actions.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#8b95a5]">
-                          Actions
-                        </p>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {group.actions.map(action => (
-                            <label
-                              key={action.key}
-                              className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-[#d0d5dd] px-3 py-2 text-sm hover:bg-[#f8f9fa]"
-                            >
-                              <input
-                                type="checkbox"
-                                className="size-4 rounded border-[#d0d5dd] accent-[#4DC591]"
-                                checked={selectedKeys.has(action.key)}
-                                onChange={e =>
-                                  toggleKey(action.key, e.target.checked)
-                                }
-                              />
-                              <span className="text-[#373B44]">
-                                {action.name}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            }
-          )}
+          {groups.map(group => (
+            <PermissionGroupCard
+              key={group.group}
+              group={group}
+              selectedKeys={selectedKeys}
+              routeNameByKey={routeNameByKey}
+              searchTerm={searchTerm.trim()}
+              onToggleKey={toggleKey}
+              onToggleGroup={toggleGroup}
+              onToggleSection={toggleSection}
+            />
+          ))}
         </div>
       )}
     </div>

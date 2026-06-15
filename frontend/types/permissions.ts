@@ -1,8 +1,23 @@
-import type { PermissionDefinition } from "@/config/permissions"
+export type PermissionType = "route" | "action"
+
+export type PermissionDefinition = {
+  key: string
+  name: string
+  type: PermissionType
+  group: string
+  href?: string
+  module?: string
+  relatedRouteKey?: string
+}
+
+export type PermissionRouteSection = {
+  section: string
+  routes: PermissionDefinition[]
+}
 
 export type PermissionGroup = {
   group: string
-  routes: PermissionDefinition[]
+  routeSections: PermissionRouteSection[]
   actions: PermissionDefinition[]
 }
 

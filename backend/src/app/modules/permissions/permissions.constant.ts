@@ -10,6 +10,15 @@ export type PermissionDefinition = {
   relatedRouteKey?: string;
 };
 
+export const MODULE_GROUP_ORDER = [
+  'Dashboard',
+  'Assets',
+  'Inventory',
+  'Procurement',
+  'Outbound',
+  'User Management',
+] as const;
+
 export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   // Dashboard
   {

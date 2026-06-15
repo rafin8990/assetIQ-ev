@@ -1,14 +1,6 @@
-export type PermissionType = "route" | "action"
+import type { PermissionDefinition, PermissionType } from "@/types/permissions"
 
-export type PermissionDefinition = {
-  key: string
-  name: string
-  type: PermissionType
-  group: string
-  href?: string
-  module?: string
-  relatedRouteKey?: string
-}
+export type { PermissionDefinition, PermissionType }
 
 export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   {

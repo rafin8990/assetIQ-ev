@@ -133,13 +133,28 @@ export function canAccessRoute(
 export function getPermissionGroupsFromRegistry() {
   const groupNames = [...new Set(PERMISSION_DEFINITIONS.map(p => p.group))]
 
-  return groupNames.map(group => ({
-    group,
-    routes: PERMISSION_DEFINITIONS.filter(
+  return groupNames.map(group => {
+    const routes = PERMISSION_DEFINITIONS.filter(
       p => p.group === group && p.type === "route"
-    ),
-    actions: PERMISSION_DEFINITIONS.filter(
-      p => p.group === group && p.type === "action"
-    ),
-  }))
+    ).sort((a, b) => a.name.localeCompare(b.name))
+
+    const routeSections = [
+      {
+        section: "Pages",
+        routes: routes.filter(route => !route.key.includes(".reports.")),
+      },
+      {
+        section: "Reports",
+        routes: routes.filter(route => route.key.includes(".reports.")),
+      },
+    ].filter(section => section.routes.length > 0)
+
+    return {
+      group,
+      routeSections,
+      actions: PERMISSION_DEFINITIONS.filter(
+        p => p.group === group && p.type === "action"
+      ).sort((a, b) => a.name.localeCompare(b.name)),
+    }
+  })
 }

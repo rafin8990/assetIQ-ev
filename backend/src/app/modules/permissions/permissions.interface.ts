@@ -4,9 +4,14 @@ export type IUserPermissionsPayload = {
   permissionKeys: string[];
 };
 
+export type IPermissionRouteSection = {
+  section: string;
+  routes: PermissionDefinition[];
+};
+
 export type IPermissionGroup = {
   group: string;
-  routes: PermissionDefinition[];
+  routeSections: IPermissionRouteSection[];
   actions: PermissionDefinition[];
 };
 
